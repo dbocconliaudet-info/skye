@@ -8,7 +8,20 @@ import { rendreCourses, ajouterDepuisTexte } from './courses.js';
 
 // ══════════════════ Onboarding ══════════════════
 
-const BLOCS = ['#accueil-choix', '#accueil-creation', '#accueil-rejoindre', '#accueil-identite'];
+const BLOCS = ['#accueil-choix', '#accueil-creation', '#accueil-code', '#accueil-rejoindre', '#accueil-identite'];
+
+/**
+ * Accepte aussi bien le code seul que le lien d'invitation entier collé.
+ * Indispensable une fois l'app installée sur l'écran d'accueil : elle n'a pas
+ * de barre d'adresse, et sur iOS son stockage est séparé de celui de Safari —
+ * la session mémorisée dans le navigateur n'y est donc pas reprise.
+ */
+function extraireJeton(saisie) {
+  const texte = (saisie || '').trim();
+  if (!texte) return '';
+  const dansUrl = texte.match(/[?&]rejoindre=([^&\s]+)/);
+  return (dansUrl ? dansUrl[1] : texte).replace(/\s+/g, '').toLowerCase();
+}
 
 function afficherBloc(selecteur) {
   for (const b of BLOCS) montrer($(b), b === selecteur);
@@ -54,12 +67,12 @@ async function flotCreation(formulaire) {
   }
 }
 
-async function flotRejoindre(jeton) {
+async function flotRejoindre(jeton, retour = '#accueil-choix') {
   try {
     const espace = await db.espaceParJeton(jeton);
     if (!espace) {
-      toast('Ce lien d’invitation n’est plus valide');
-      afficherBloc('#accueil-choix');
+      toast('Code inconnu — vérifie qu’il est complet');
+      afficherBloc(retour);
       return;
     }
     etat.espaceId = espace.id;
@@ -72,7 +85,7 @@ async function flotRejoindre(jeton) {
     afficherBloc('#accueil-rejoindre');
   } catch (e) {
     toast(`Connexion impossible : ${e.message}`);
-    afficherBloc('#accueil-choix');
+    afficherBloc(retour);
   }
 }
 
@@ -160,6 +173,13 @@ function brancherEvenements() {
   $('#accueil-creation').addEventListener('submit', (e) => {
     e.preventDefault();
     flotCreation(e.currentTarget);
+  });
+  $('[data-action="ouvrir-code"]').addEventListener('click', () => afficherBloc('#accueil-code'));
+  $('#accueil-code').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const jeton = extraireJeton(e.currentTarget.code.value);
+    if (!jeton) { toast('Entre le code de l’espace'); return; }
+    flotRejoindre(jeton, '#accueil-code');
   });
 
   // — Barre d'onglets
@@ -271,6 +291,18 @@ function ouvrirReglages() {
 
     el('button', { class: 'btn btn-primaire', onclick: partagerLien }, 'Envoyer le lien d’invitation'),
     el('button', { class: 'btn btn-doux', onclick: changerIdentite }, 'Changer de personne'),
+
+    el('div', { class: 'separateur' }),
+    el('label', { class: 'champ' },
+      el('span', {}, 'Code de l’espace'),
+      el('input', {
+        type: 'text', value: etat.lienInvitation, readonly: true,
+        onclick: (e) => { e.target.select(); },
+      })),
+    el('p', { class: 'feuille-info' },
+      'À saisir dans « J’ai déjà un espace » pour rentrer depuis un autre appareil, '
+      + 'ou après avoir installé l’app sur l’écran d’accueil — sur iPhone, l’app installée '
+      + 'a sa propre mémoire, séparée de celle de Safari.'),
 
     el('div', { class: 'separateur' }),
     el('p', { class: 'feuille-info' },

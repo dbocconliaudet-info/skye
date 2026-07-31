@@ -30,8 +30,21 @@
     <!-- Choix initial -->
     <div id="accueil-choix" class="bloc-accueil">
       <button class="btn btn-primaire" data-action="ouvrir-creation">Créer notre espace</button>
-      <p class="aide">Ton/ta partenaire t'a envoyé un lien&nbsp;? Ouvre-le directement, il te fera rejoindre l'espace.</p>
+      <button class="btn btn-doux" data-action="ouvrir-code">J'ai déjà un espace</button>
+      <p class="aide">Ton/ta partenaire t'a envoyé un lien&nbsp;? Ouvre-le directement. Sinon, entre le code de l'espace.</p>
     </div>
+
+    <!-- Rejoindre avec un code (indispensable dans l'app installée : pas de barre d'adresse) -->
+    <form id="accueil-code" class="bloc-accueil masque" autocomplete="off">
+      <label class="champ">
+        <span>Code de l'espace</span>
+        <input type="text" name="code" placeholder="ex : 37azm8f389uerckxyogmpk"
+               autocapitalize="none" autocorrect="off" spellcheck="false" required>
+      </label>
+      <p class="aide">Le code se trouve dans l'app, sur l'autre téléphone&nbsp;: icône ⚙ en haut à droite. Tu peux aussi coller le lien d'invitation entier.</p>
+      <button type="submit" class="btn btn-primaire">Rejoindre</button>
+      <button type="button" class="btn btn-discret" data-action="retour-accueil">Retour</button>
+    </form>
 
     <!-- Création d'un espace -->
     <form id="accueil-creation" class="bloc-accueil masque" autocomplete="off">
