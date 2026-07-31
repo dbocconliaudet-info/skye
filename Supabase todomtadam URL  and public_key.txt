@@ -1,0 +1,2 @@
+Supabase todomtadam URL : https://rorswahnjnvbmabnjtlh.supabase.co
+Public key todomtadam : sb_publishable_gLIfjeGROrxNEn_V36Uj1Q_Yp5bNMSm
