@@ -11,7 +11,7 @@
  * URL : elles, on les sert depuis le cache en priorité.
  */
 
-const VERSION = 'todomtadam-v1';
+const VERSION = 'todomtadam-v2';
 const COQUILLE = [
   './',
   './index.html',
