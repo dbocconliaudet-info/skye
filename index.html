@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1">
+<title>ToDomTaDam</title>
+
+<meta name="theme-color" content="#FBE9E4">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="ToDomTaDam">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<!-- ══════════════════ Écran de démarrage / onboarding ══════════════════ -->
+<section id="ecran-accueil" class="ecran ecran-plein">
+  <div class="bienvenue">
+    <img class="bienvenue-logo" src="icons/coquelicots.png" alt="">
+    <h1 class="marque">ToDomTaDam</h1>
+    <p class="baseline">L'organisation du quotidien, à deux.</p>
+
+    <!-- Choix initial -->
+    <div id="accueil-choix" class="bloc-accueil">
+      <button class="btn btn-primaire" data-action="ouvrir-creation">Créer notre espace</button>
+      <p class="aide">Ton/ta partenaire t'a envoyé un lien&nbsp;? Ouvre-le directement, il te fera rejoindre l'espace.</p>
+    </div>
+
+    <!-- Création d'un espace -->
+    <form id="accueil-creation" class="bloc-accueil masque" autocomplete="off">
+      <label class="champ">
+        <span>Nom de votre espace</span>
+        <input type="text" name="nom" placeholder="Famille Dupont" required maxlength="40">
+      </label>
+      <label class="champ">
+        <span>Prénom de la première personne</span>
+        <input type="text" name="membre1" placeholder="Damien" required maxlength="20">
+      </label>
+      <label class="champ">
+        <span>Prénom de la deuxième personne</span>
+        <input type="text" name="membre2" placeholder="Dom" required maxlength="20">
+      </label>
+      <button type="submit" class="btn btn-primaire">Créer l'espace</button>
+      <button type="button" class="btn btn-discret" data-action="retour-accueil">Retour</button>
+    </form>
+
+    <!-- Rejoindre via lien d'invitation -->
+    <div id="accueil-rejoindre" class="bloc-accueil masque">
+      <p class="rejoindre-titre">Rejoindre l'espace<br><strong id="rejoindre-nom"></strong></p>
+      <p class="aide">Qui es-tu&nbsp;?</p>
+      <div id="rejoindre-membres" class="choix-membres"></div>
+      <button type="button" class="btn btn-discret" data-action="retour-accueil">Retour</button>
+    </div>
+
+    <!-- Choix du membre après création -->
+    <div id="accueil-identite" class="bloc-accueil masque">
+      <p class="aide">Espace créé&nbsp;! Qui es-tu&nbsp;?</p>
+      <div id="identite-membres" class="choix-membres"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════ Application ══════════════════ -->
+<div id="app" class="masque">
+
+  <header class="topbar">
+    <div class="brand">
+      <img src="icons/coquelicots.png" alt="">
+      <span>ToDomTaDam</span>
+      <button class="btn-reglages" data-action="ouvrir-reglages" aria-label="Réglages">⚙</button>
+    </div>
+    <div class="titre" id="titre-module">On s'en occupe</div>
+  </header>
+
+  <!-- ─────────── Module « On s'en occupe » ─────────── -->
+  <main id="vue-taches" class="vue">
+    <div class="segmented" role="tablist">
+      <button class="on" data-onglet-taches="actives" role="tab">À faire / En cours</button>
+      <button data-onglet-taches="historique" role="tab">Historique</button>
+    </div>
+
+    <div id="filtres-historique" class="filtres masque">
+      <button class="puce on" data-filtre-histo="tout">Tout</button>
+      <button class="puce" data-filtre-histo="fait">Fait</button>
+      <button class="puce" data-filtre-histo="sans_objet">Devenu sans objet</button>
+    </div>
+
+    <div id="colonnes-taches" class="colonnes"></div>
+    <button class="fab" data-action="nouvelle-tache" aria-label="Nouvelle tâche">+</button>
+  </main>
+
+  <!-- ─────────── Module « Courses » ─────────── -->
+  <main id="vue-courses" class="vue masque">
+    <div id="onglets-listes" class="filtres listes-onglets"></div>
+    <div id="contenu-courses" class="contenu-courses"></div>
+
+    <form id="barre-ajout" class="addbar" autocomplete="off">
+      <input type="text" name="article" placeholder="Ajouter un article…" enterkeyhint="done">
+      <button type="submit" class="mic" aria-label="Ajouter">+</button>
+    </form>
+  </main>
+
+  <!-- ─────────── Barre d'onglets ─────────── -->
+  <nav class="tabbar">
+    <button class="on" data-module="taches">
+      <span class="tab-ico">✓</span>
+      <span>On s'en occupe</span>
+    </button>
+    <button data-module="courses">
+      <span class="tab-ico">🛒</span>
+      <span>Courses</span>
+    </button>
+  </nav>
+</div>
+
+<!-- ══════════════════ Feuille modale ══════════════════ -->
+<div id="voile" class="voile masque">
+  <div id="feuille" class="feuille" role="dialog" aria-modal="true"></div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
