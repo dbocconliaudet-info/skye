@@ -8,6 +8,7 @@ import { etat, oublierSession, pseudoDe, moi, partenaire } from './etat.js';
 import * as db from './db.js';
 import { rendreTaches, ouvrirNouvelleTache, genererOccurrencesDues } from './taches.js';
 import { rendreCourses, ajouterDepuisTexte } from './courses.js';
+import { rendreTricount, ouvrirNouvelleDepense } from './tricount.js';
 
 // ══════════════════ Onboarding ══════════════════
 
@@ -263,12 +264,13 @@ async function entrerDansApp() {
 }
 
 async function rechargerDonnees() {
-  const [espace, membres, taches, listes, articles, dico] = await Promise.all([
+  const [espace, membres, taches, listes, articles, depenses, dico] = await Promise.all([
     db.espaceParId(etat.espaceId),
     db.chargerMembres(etat.espaceId),
     db.chargerTaches(etat.espaceId),
     db.chargerListes(etat.espaceId),
     db.chargerArticles(etat.espaceId),
+    db.chargerDepenses(etat.espaceId),
     db.chargerDico(etat.espaceId),
   ]);
   // Relire l'espace à chaque fois évite de traîner un nom ou une date modifiés
@@ -282,6 +284,7 @@ async function rechargerDonnees() {
   etat.taches = taches;
   etat.listes = listes;
   etat.articles = articles;
+  etat.depenses = depenses;
   etat.dico = new Map(dico.map((d) => [d.mot, d.rayon]));
   rendreTout();
 }
@@ -289,6 +292,7 @@ async function rechargerDonnees() {
 function rendreTout() {
   rendreTaches();
   rendreCourses();
+  rendreTricount();
 }
 
 /**
@@ -308,11 +312,18 @@ function planifierRechargement() {
 
 // ══════════════════ Navigation ══════════════════
 
+const TITRES_MODULES = {
+  taches: 'On s’en occupe',
+  courses: 'Courses',
+  tricount: 'Tricount',
+};
+
 function basculerModule(nom) {
   etat.module = nom;
   montrer($('#vue-taches'), nom === 'taches');
   montrer($('#vue-courses'), nom === 'courses');
-  $('#titre-module').textContent = nom === 'taches' ? 'On s’en occupe' : 'Courses';
+  montrer($('#vue-tricount'), nom === 'tricount');
+  $('#titre-module').textContent = TITRES_MODULES[nom] || '';
   for (const b of $$('.tabbar button')) b.classList.toggle('on', b.dataset.module === nom);
 }
 
@@ -381,6 +392,9 @@ function brancherEvenements() {
     });
   }
   $('[data-action="nouvelle-tache"]').addEventListener('click', ouvrirNouvelleTache);
+
+  // — Tricount
+  $('[data-action="nouvelle-depense"]').addEventListener('click', ouvrirNouvelleDepense);
 
   // — Courses : barre d'ajout
   $('#barre-ajout').addEventListener('submit', (e) => {

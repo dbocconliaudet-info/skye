@@ -19,10 +19,11 @@ export const etat = {
   taches: [],
   listes: [],
   articles: [],
+  depenses: [],
   dico: new Map(),          // mot normalisé -> rayon appris par le couple
 
   // Navigation
-  module: 'taches',          // 'taches' | 'courses'
+  module: 'taches',          // 'taches' | 'courses' | 'tricount'
   ongletTaches: 'actives',   // 'actives' | 'historique'
   filtreHisto: 'tout',       // 'tout' | 'fait' | 'sans_objet'
   groupement: 'personne',    // 'personne' | 'categorie' | 'priorite'
@@ -33,7 +34,7 @@ export const etat = {
 export function oublierSession() {
   Object.assign(etat, {
     espaceId: null, espaceNom: '', lienInvitation: '', dateMariage: '', membreId: null,
-    membres: [], taches: [], listes: [], articles: [], dico: new Map(),
+    membres: [], taches: [], listes: [], articles: [], depenses: [], dico: new Map(),
     listeActiveId: null,
   });
 }

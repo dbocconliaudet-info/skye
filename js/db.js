@@ -198,6 +198,21 @@ export const apprendreRayon = async (espaceId, mot, rayon) =>
   ok(await sb.from('dictionnaire_rayons')
     .upsert({ espace_id: espaceId, mot, rayon }, { onConflict: 'espace_id,mot' }));
 
+// ── Tricount ───────────────────────────────────────────────────────────────
+
+export const chargerDepenses = async (espaceId) =>
+  ok(await sb.from('depenses').select('*').eq('espace_id', espaceId)
+    .order('date_depense', { ascending: false }).order('cree_le', { ascending: false }));
+
+export const creerDepense = async (depense) =>
+  ok(await sb.from('depenses').insert(depense).select().single());
+
+export const majDepense = async (id, patch) =>
+  ok(await sb.from('depenses').update(patch).eq('id', id).select().single());
+
+export const supprimerDepense = async (id) =>
+  ok(await sb.from('depenses').delete().eq('id', id));
+
 // ── Mots au/à la partenaire ────────────────────────────────────────────────
 
 /** Les mots non lus qui me sont adressés. La base filtre déjà sur le
@@ -231,7 +246,8 @@ export const marquerMessageLu = async (id) =>
  *  chaque insert/update/delete venant de l'autre téléphone. */
 export function abonner(espaceId, auChangement) {
   const canal = sb.channel(`espace-${espaceId}`);
-  for (const table of ['taches', 'listes_courses', 'articles_courses', 'membres', 'dictionnaire_rayons']) {
+  for (const table of ['taches', 'listes_courses', 'articles_courses', 'membres',
+    'dictionnaire_rayons', 'depenses']) {
     canal.on(
       'postgres_changes',
       { event: '*', schema: 'public', table, filter: `espace_id=eq.${espaceId}` },

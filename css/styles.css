@@ -301,6 +301,57 @@ input,select,textarea{font-family:inherit;font-size:16px;color:inherit;} /* 16px
 .tabbar button.on{color:var(--poppy);}
 .tab-ico{font-size:19px;line-height:1;}
 
+/* ══════════════════ Module « Tricount » ══════════════════ */
+
+.contenu-tricount{flex:1;overflow-y:auto;padding:14px 16px 12px;-webkit-overflow-scrolling:touch;}
+
+/* Le solde est la seule chose qu'on vient vraiment vérifier : il occupe le
+   haut de l'écran, en grand, et n'a pas à partager la place avec autre chose. */
+.solde{
+  background:var(--card);border-radius:22px;padding:20px 18px;
+  box-shadow:var(--ombre);text-align:center;margin-bottom:6px;
+}
+.solde-phrase{font-size:13.5px;font-weight:700;color:var(--gris);margin:0 0 6px;}
+.solde-montant{
+  font-family:'Quicksand',sans-serif;font-size:38px;font-weight:700;
+  line-height:1.1;margin:0 0 16px;
+}
+.solde-positif .solde-montant{color:var(--leaf);}
+.solde-negatif .solde-montant{color:var(--poppy-dark);}
+.solde-detail{font-size:13px;color:var(--gris);margin:0;}
+.solde-nul .solde-phrase{font-family:'Quicksand',sans-serif;font-size:19px;color:var(--ink);}
+.solde .btn{margin:0;}
+
+.tricount-mois{
+  font-size:11px;font-weight:800;color:var(--leaf);text-transform:uppercase;
+  letter-spacing:.05em;margin:18px 0 7px 4px;
+}
+
+.depense{
+  display:flex;align-items:center;gap:11px;width:100%;text-align:left;
+  background:var(--card);border:none;border-radius:16px;
+  padding:11px 13px;margin-bottom:7px;box-shadow:var(--ombre);
+}
+.depense-corps{flex:1;min-width:0;}
+.depense-libelle{
+  font-size:15px;font-weight:700;color:var(--ink);margin:0 0 3px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.depense-meta{font-size:11.5px;color:var(--gris);margin:0;}
+.depense-montant{
+  font-family:'Quicksand',sans-serif;font-size:17px;font-weight:700;
+  color:var(--ink);white-space:nowrap;flex-shrink:0;
+}
+/* Un remboursement ou une reprise de solde n'est pas une dépense : il ne doit
+   pas se lire comme de l'argent dépensé au milieu de la liste. */
+.depense-reglement{background:transparent;box-shadow:none;border:1px dashed var(--gris-clair);}
+.depense-reglement .depense-libelle,
+.depense-reglement .depense-montant{color:var(--gris);font-weight:700;}
+
+.tricount-vide{text-align:center;padding:26px 10px;}
+.tricount-vide > p:first-child{font-size:15px;font-weight:700;color:var(--gris);}
+.tricount-reprise{margin-top:18px;}
+
 /* ══════════════════ Feuille modale ══════════════════ */
 
 .voile{
@@ -385,6 +436,7 @@ input,select,textarea{font-family:inherit;font-size:16px;color:inherit;} /* 16px
      centrer sur toute la largeur disponible. */
   .segmented,.filtres,.addbar{max-width:900px;width:100%;margin-left:auto;margin-right:auto;}
   .contenu-courses{max-width:900px;margin:0 auto;width:100%;}
+  .contenu-tricount{max-width:640px;margin:0 auto;width:100%;}
   .colonnes{justify-content:flex-start;max-width:900px;margin:0 auto;width:100%;}
   .voile{align-items:center;}
   .feuille{border-radius:26px;max-height:86dvh;}
