@@ -4,19 +4,64 @@ Web app privée pour organiser à deux les tâches du quotidien et les courses.
 Installable sur l'écran d'accueil d'un téléphone, synchronisée en temps réel
 entre les deux membres du foyer.
 
-Cahier des charges complet : [`brief/cahier-des-charges-todomtadam.md`](brief/cahier-des-charges-todomtadam.md).
+Cahier des charges complet : [`brief/cahier-des-charges-todomtadam.md`](brief/cahier-des-charges-todomtadam.md),
+puis [`brief/evolutions-v2-todomtadam.md`](brief/evolutions-v2-todomtadam.md) pour la suite.
 
 ---
 
-## Mise en route (à faire une seule fois)
+## Mise à jour vers la v2 (comptes et sécurité)
+
+Si l'app tourne déjà avec la version précédente, trois étapes, dans cet ordre.
+
+### 1. Régler l'authentification dans Supabase
+
+Tableau de bord → projet **todomtadam** → **Authentication** :
+
+- **Sign In / Providers → Email** : décocher **Confirm email**. Sans ça, chacun
+  devrait aller confirmer son adresse avant de pouvoir entrer — inutile ici,
+  et le lien « mot de passe oublié » valide de toute façon l'adresse le jour où
+  il sert.
+- **Sessions** : allonger la durée de vie du refresh token (**Inactivity
+  timeout**) pour ne pas avoir à se reconnecter tous les quatre matins. C'est
+  le seul réglage que le code ne peut pas poser lui-même.
+
+### 2. Passer le script SQL
+
+**SQL Editor** → **New query** → coller tout
+[`supabase/schema-v2.sql`](supabase/schema-v2.sql) → **Run**.
+Rejouable sans risque, comme le premier.
+
+Il fait trois choses : il renomme `prenom` en `pseudo`, il ajoute les comptes,
+les dates et les messages, et surtout il **remplace la règle d'accès ouverte de
+la v1 par une vraie Row Level Security**. À partir de là, la base ne répond plus
+sans session, et chacun ne voit que son propre espace.
+
+### 3. Recréer vos comptes, sans perdre l'historique
+
+Vos deux membres existent déjà en base, mais sans compte. Sur le premier
+téléphone : **Rejoindre un espace** → coller le code de l'espace → l'écran
+propose **« Je suis Damien »** / **« Je suis Dom »**. En choisissant son nom, on
+reprend le membre existant : toutes les tâches déjà créées, y compris
+l'historique, restent attachées. Même chose sur le deuxième téléphone avec
+l'autre nom.
+
+Le code de l'espace se lit dans l'app, icône ⚙. Si vous n'y avez plus accès :
+tableau de bord Supabase → **Table Editor** → `espaces` → colonne
+`lien_invitation`.
+
+---
+
+## Mise en route (première installation)
 
 ### 1. Créer les tables dans Supabase
 
 1. Ouvrir [le tableau de bord Supabase](https://supabase.com/dashboard) → projet **todomtadam**
 2. Menu de gauche → **SQL Editor** → **New query**
 3. Coller **tout** le contenu de [`supabase/schema.sql`](supabase/schema.sql) → **Run**
+4. Recommencer avec [`supabase/schema-v2.sql`](supabase/schema-v2.sql), et faire
+   les réglages d'authentification décrits juste au-dessus
 
-Le script est rejouable sans risque : le relancer ne détruit aucune donnée.
+Les scripts sont rejouables sans risque : les relancer ne détruit aucune donnée.
 
 ### 2. Publier le site sur GitHub Pages
 
@@ -30,10 +75,10 @@ Une minute plus tard, l'app est en ligne sur :
 ### 3. Créer l'espace et inviter Dom
 
 1. Ouvrir l'adresse ci-dessus sur ton téléphone
-2. **Créer notre espace** → nom du foyer + les deux prénoms
-3. Choisir qui tu es
-4. Icône **⚙** en haut à droite → **Envoyer le lien d'invitation** → envoyer le lien à Dom par SMS
-5. Dom ouvre le lien, choisit son prénom : c'est fait
+2. **Créer notre espace** → ton pseudo, ton email, ton mot de passe, puis le nom
+   du foyer (les deux dates sont facultatives)
+3. Icône **⚙** en haut à droite → **Envoyer le lien d'invitation** → envoyer le lien à Dom par SMS
+4. Dom ouvre le lien, crée son compte à son tour : c'est fait
 
 ### 4. Installer l'app sur l'écran d'accueil
 
@@ -76,8 +121,8 @@ JavaScript exigent un vrai serveur (`http://`, pas `file://`).
 | `index.html` | Structure de tous les écrans |
 | `css/styles.css` | Charte graphique (palette coquelicot & liberty, typos) |
 | `js/config.js` | Coordonnées Supabase, listes de catégories et priorités |
-| `js/db.js` | Tous les accès à la base et l'abonnement temps réel |
-| `js/etat.js` | État de l'app + session mémorisée sur l'appareil |
+| `js/db.js` | Comptes, accès à la base et abonnement temps réel |
+| `js/etat.js` | État de l'app en mémoire |
 | `js/ui.js` | Briques d'interface : feuille modale, toast, dates |
 | `js/rayons.js` | Dictionnaire des rayons, découpage de la dictée |
 | `js/taches.js` | Module « On s'en occupe » |
@@ -85,6 +130,7 @@ JavaScript exigent un vrai serveur (`http://`, pas `file://`).
 | `js/app.js` | Démarrage, onboarding, navigation |
 | `sw.js` + `manifest.json` | Ce qui rend l'app installable |
 | `supabase/schema.sql` | Le schéma de base de données |
+| `supabase/schema-v2.sql` | Comptes, Row Level Security, dates, messages |
 | `icons/` | Icônes générées depuis l'illustration des coquelicots |
 
 ---
@@ -120,25 +166,27 @@ Le tout se synchronise en direct entre les deux téléphones.
   reporté au prochain tour. Les tâches récurrentes, elles, fonctionnent :
   chaque occurrence apparaît toute seule à sa date, sans serveur.
 - **Module Documents** et **module Agenda** : hors périmètre v1 (§8).
+- Des évolutions v2, seuls les **comptes** et la **Row Level Security** sont
+  faits. Restent à venir : la modification des dates dans les Réglages, les
+  filtres « Regrouper par » du board, et le mot au/à la partenaire.
 
 ---
 
-## Limite de sécurité, assumée et à connaître
+## Où en est la sécurité
 
-Cette version n'a **pas de mot de passe** : le lien d'invitation est le seul
-verrou, comme prévu au §4 du cahier des charges.
+Le premier livrable n'avait pas de mot de passe : n'importe qui tombant sur ce
+dépôt pouvait lire et modifier les données. **Ce n'est plus le cas.** Depuis
+`schema-v2.sql`, chaque personne a un compte, et la base filtre elle-même les
+lignes selon l'espace auquel appartient le compte connecté. L'adresse du projet
+Supabase et sa clé publique restent visibles dans le code source — c'est normal,
+elles sont faites pour ça — mais elles ne donnent plus accès à rien sans
+identifiants.
 
-Il faut en mesurer la portée exacte. GitHub Pages impose un dépôt public, donc
-l'adresse du projet Supabase et sa clé publique sont visibles par n'importe qui.
-Sans authentification, la base ne peut pas vérifier qui l'interroge : **toute
-personne qui trouve ce dépôt peut lire et modifier vos tâches et vos courses.**
+Le seul secret partagé qui subsiste est le code d'invitation : qui le possède
+peut voir le nom de l'espace et rejoindre le foyer, tant qu'il reste une place
+sur les deux. Une fois les deux membres inscrits, le code ne permet plus rien.
 
-Pour des listes de courses et des tâches ménagères, le compromis se défend.
-Il ne tiendra plus dès qu'il s'agira du module Documents (justificatifs, pièces
-d'identité, avis d'imposition) : il faudra alors une vraie authentification
-avant d'écrire la première ligne de ce module.
-
-Si tu veux relever le niveau dès maintenant, deux pistes, par effort croissant :
-rendre le dépôt privé et héberger ailleurs (Netlify, Cloudflare Pages, gratuits
-tous les deux), ou ajouter l'authentification Supabase avec un mot de passe par
-personne et des règles d'accès qui filtrent par espace.
+Ce niveau convient à des tâches et des listes de courses, et sert de base
+correcte pour la suite. Le module Documents (§8 du cahier des charges) demandera
+tout de même son propre passage : chiffrement et contrôle d'accès s'y jugent au
+cas par cas, pas par héritage.

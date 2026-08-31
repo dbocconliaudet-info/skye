@@ -29,10 +29,49 @@
 
     <!-- Choix initial -->
     <div id="accueil-choix" class="bloc-accueil">
-      <button class="btn btn-primaire" data-action="ouvrir-creation">Créer notre espace</button>
-      <button class="btn btn-doux" data-action="ouvrir-code">J'ai déjà un espace</button>
-      <p class="aide">Ton/ta partenaire t'a envoyé un lien&nbsp;? Ouvre-le directement. Sinon, entre le code de l'espace.</p>
+      <button class="btn btn-primaire" data-action="ouvrir-connexion">Se connecter</button>
+      <button class="btn btn-doux" data-action="ouvrir-creation">Créer notre espace</button>
+      <button class="btn btn-doux" data-action="ouvrir-code">Rejoindre un espace</button>
+      <p class="aide">Ton/ta partenaire t'a envoyé un lien&nbsp;? Ouvre-le directement&nbsp;: il t'amènera au bon endroit.</p>
     </div>
+
+    <!-- Connexion -->
+    <form id="accueil-connexion" class="bloc-accueil masque">
+      <label class="champ">
+        <span>Email</span>
+        <input type="email" name="email" autocomplete="username" inputmode="email"
+               autocapitalize="none" autocorrect="off" spellcheck="false" required>
+      </label>
+      <label class="champ">
+        <span>Mot de passe</span>
+        <input type="password" name="motdepasse" autocomplete="current-password" required>
+      </label>
+      <button type="submit" class="btn btn-primaire">Se connecter</button>
+      <button type="button" class="btn btn-lien" data-action="ouvrir-oubli">Mot de passe oublié&nbsp;?</button>
+      <button type="button" class="btn btn-discret" data-action="retour-accueil">Retour</button>
+    </form>
+
+    <!-- Mot de passe oublié -->
+    <form id="accueil-oubli" class="bloc-accueil masque">
+      <p class="aide">On t'envoie un lien pour choisir un nouveau mot de passe. Chacun reçoit le sien&nbsp;: pas besoin de connaître l'adresse de l'autre.</p>
+      <label class="champ">
+        <span>Ton email</span>
+        <input type="email" name="email" autocomplete="username" inputmode="email"
+               autocapitalize="none" autocorrect="off" spellcheck="false" required>
+      </label>
+      <button type="submit" class="btn btn-primaire">Envoyer le lien</button>
+      <button type="button" class="btn btn-discret" data-action="ouvrir-connexion">Retour</button>
+    </form>
+
+    <!-- Nouveau mot de passe, après clic sur le lien reçu par email -->
+    <form id="accueil-nouveau-mdp" class="bloc-accueil masque">
+      <p class="aide">Choisis ton nouveau mot de passe.</p>
+      <label class="champ">
+        <span>Nouveau mot de passe</span>
+        <input type="password" name="motdepasse" autocomplete="new-password" minlength="6" required>
+      </label>
+      <button type="submit" class="btn btn-primaire">Enregistrer</button>
+    </form>
 
     <!-- Rejoindre avec un code (indispensable dans l'app installée : pas de barre d'adresse) -->
     <form id="accueil-code" class="bloc-accueil masque" autocomplete="off">
@@ -42,40 +81,90 @@
                autocapitalize="none" autocorrect="off" spellcheck="false" required>
       </label>
       <p class="aide">Le code se trouve dans l'app, sur l'autre téléphone&nbsp;: icône ⚙ en haut à droite. Tu peux aussi coller le lien d'invitation entier.</p>
-      <button type="submit" class="btn btn-primaire">Rejoindre</button>
+      <button type="submit" class="btn btn-primaire">Continuer</button>
       <button type="button" class="btn btn-discret" data-action="retour-accueil">Retour</button>
     </form>
 
-    <!-- Création d'un espace -->
-    <form id="accueil-creation" class="bloc-accueil masque" autocomplete="off">
+    <!-- Création du compte + de l'espace, en une fois -->
+    <form id="accueil-creation" class="bloc-accueil masque">
+      <p class="bloc-titre">Ton compte</p>
+      <label class="champ">
+        <span>Ton pseudo</span>
+        <input type="text" name="pseudo" placeholder="Damien" required maxlength="20"
+               autocomplete="nickname">
+      </label>
+      <div class="champs-compte">
+        <label class="champ">
+          <span>Ton email</span>
+          <input type="email" name="email" autocomplete="username" inputmode="email"
+                 autocapitalize="none" autocorrect="off" spellcheck="false" required>
+        </label>
+        <label class="champ">
+          <span>Mot de passe</span>
+          <input type="password" name="motdepasse" autocomplete="new-password" minlength="6" required>
+        </label>
+      </div>
+      <label class="champ">
+        <span>Ta date de naissance <em>(facultatif)</em></span>
+        <input type="date" name="date_naissance">
+      </label>
+
+      <p class="bloc-titre">Votre espace</p>
       <label class="champ">
         <span>Nom de votre espace</span>
         <input type="text" name="nom" placeholder="Famille Dupont" required maxlength="40">
       </label>
       <label class="champ">
-        <span>Prénom de la première personne</span>
-        <input type="text" name="membre1" placeholder="Damien" required maxlength="20">
+        <span>Date de mariage ou de PACS <em>(facultatif)</em></span>
+        <input type="date" name="date_mariage">
       </label>
-      <label class="champ">
-        <span>Prénom de la deuxième personne</span>
-        <input type="text" name="membre2" placeholder="Dom" required maxlength="20">
-      </label>
+
       <button type="submit" class="btn btn-primaire">Créer l'espace</button>
       <button type="button" class="btn btn-discret" data-action="retour-accueil">Retour</button>
     </form>
 
-    <!-- Rejoindre via lien d'invitation -->
-    <div id="accueil-rejoindre" class="bloc-accueil masque">
+    <!-- Rejoindre : identité puis création du compte -->
+    <form id="accueil-rejoindre" class="bloc-accueil masque">
       <p class="rejoindre-titre">Rejoindre l'espace<br><strong id="rejoindre-nom"></strong></p>
-      <p class="aide">Qui es-tu&nbsp;?</p>
-      <div id="rejoindre-membres" class="choix-membres"></div>
-      <button type="button" class="btn btn-discret" data-action="retour-accueil">Retour</button>
-    </div>
 
-    <!-- Choix du membre après création -->
-    <div id="accueil-identite" class="bloc-accueil masque">
-      <p class="aide">Espace créé&nbsp;! Qui es-tu&nbsp;?</p>
-      <div id="identite-membres" class="choix-membres"></div>
+      <!-- N'apparaît que s'il reste des membres créés avec la v1, sans compte. -->
+      <div id="rejoindre-reprise" class="masque">
+        <p class="aide">Qui es-tu&nbsp;?</p>
+        <div id="rejoindre-membres" class="choix-membres"></div>
+      </div>
+
+      <p class="bloc-titre">Ton compte</p>
+      <label class="champ">
+        <span>Ton pseudo</span>
+        <input type="text" name="pseudo" placeholder="Dom" required maxlength="20"
+               autocomplete="nickname">
+      </label>
+      <div class="champs-compte">
+        <label class="champ">
+          <span>Ton email</span>
+          <input type="email" name="email" autocomplete="username" inputmode="email"
+                 autocapitalize="none" autocorrect="off" spellcheck="false" required>
+        </label>
+        <label class="champ">
+          <span>Mot de passe</span>
+          <input type="password" name="motdepasse" autocomplete="new-password" minlength="6" required>
+        </label>
+      </div>
+      <label class="champ">
+        <span>Ta date de naissance <em>(facultatif)</em></span>
+        <input type="date" name="date_naissance">
+      </label>
+
+      <button type="submit" class="btn btn-primaire">Rejoindre l'espace</button>
+      <button type="button" class="btn btn-discret" data-action="retour-accueil">Retour</button>
+    </form>
+
+    <!-- Compte créé, mais pas encore rattaché à un espace -->
+    <div id="accueil-sans-espace" class="bloc-accueil masque">
+      <p class="aide">Te voilà connecté·e, mais ton compte n'est rattaché à aucun espace.</p>
+      <button class="btn btn-primaire" data-action="ouvrir-creation">Créer notre espace</button>
+      <button class="btn btn-doux" data-action="ouvrir-code">Rejoindre un espace</button>
+      <button type="button" class="btn btn-discret" data-action="deconnexion">Se déconnecter</button>
     </div>
   </div>
 </section>

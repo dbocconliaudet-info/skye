@@ -1,14 +1,15 @@
 // Point d'entrée : onboarding, navigation, chargement des données, temps réel.
 
 import { $, $$, el, vider, montrer, toast, ouvrirFeuille, fermerFeuille, confirmer, feuilleEstOuverte } from './ui.js';
-import { etat, chargerSession, enregistrerSession, effacerSession, prenomDe } from './etat.js';
+import { etat, oublierSession, pseudoDe } from './etat.js';
 import * as db from './db.js';
 import { rendreTaches, ouvrirNouvelleTache, genererOccurrencesDues } from './taches.js';
 import { rendreCourses, ajouterDepuisTexte } from './courses.js';
 
 // ══════════════════ Onboarding ══════════════════
 
-const BLOCS = ['#accueil-choix', '#accueil-creation', '#accueil-code', '#accueil-rejoindre', '#accueil-identite'];
+const BLOCS = ['#accueil-choix', '#accueil-connexion', '#accueil-oubli', '#accueil-nouveau-mdp',
+  '#accueil-creation', '#accueil-code', '#accueil-rejoindre', '#accueil-sans-espace'];
 
 /**
  * Accepte aussi bien le code seul que le lien d'invitation entier collé.
@@ -29,71 +30,207 @@ function afficherBloc(selecteur) {
   montrer($('#app'), false);
 }
 
-function boutonsMembres(hote, auChoix) {
-  vider(hote);
-  for (const m of etat.membres) {
-    hote.append(el('button', {
-      class: 'btn btn-doux',
-      onclick: () => auChoix(m),
-    }, m.prenom));
-  }
-}
-
-async function flotCreation(formulaire) {
-  const donnees = new FormData(formulaire);
-  const nom = (donnees.get('nom') || '').trim();
-  const p1 = (donnees.get('membre1') || '').trim();
-  const p2 = (donnees.get('membre2') || '').trim();
-  if (!nom || !p1 || !p2) { toast('Il manque un champ'); return; }
-
+/** Pendant une soumission : bouton grisé et libellé d'attente. */
+async function pendantEnvoi(formulaire, libelle, action) {
   const bouton = formulaire.querySelector('button[type="submit"]');
+  const initial = bouton.textContent;
   bouton.disabled = true;
-  bouton.textContent = 'Création…';
-
+  bouton.textContent = libelle;
   try {
-    const { espace, membres } = await db.creerEspace(nom, p1, p2);
-    etat.espaceId = espace.id;
-    etat.espaceNom = espace.nom;
-    etat.lienInvitation = espace.lien_invitation;
-    etat.membres = membres;
-
-    boutonsMembres($('#identite-membres'), choisirIdentite);
-    afficherBloc('#accueil-identite');
+    await action();
   } catch (e) {
-    toast(`Création impossible : ${e.message}`);
+    toast(e.message);
   } finally {
     bouton.disabled = false;
-    bouton.textContent = 'Créer l’espace';
+    bouton.textContent = initial;
   }
 }
 
-async function flotRejoindre(jeton, retour = '#accueil-choix') {
-  try {
-    const espace = await db.espaceParJeton(jeton);
-    if (!espace) {
-      toast('Code inconnu — vérifie qu’il est complet');
-      afficherBloc(retour);
-      return;
-    }
-    etat.espaceId = espace.id;
-    etat.espaceNom = espace.nom;
-    etat.lienInvitation = espace.lien_invitation;
-    etat.membres = await db.chargerMembres(espace.id);
+/** Les champs email + mot de passe n'ont de sens que si personne n'est encore
+ *  connecté. Quelqu'un dont l'inscription s'est arrêtée avant le rattachement
+ *  à un espace reprend là où il en était, sans recréer de compte. */
+let dejaConnecte = false;
 
-    $('#rejoindre-nom').textContent = espace.nom;
-    boutonsMembres($('#rejoindre-membres'), choisirIdentite);
-    afficherBloc('#accueil-rejoindre');
-  } catch (e) {
+function adapterChampsCompte(formulaire) {
+  const bloc = formulaire.querySelector('.champs-compte');
+  if (!bloc) return;
+  montrer(bloc, !dejaConnecte);
+  for (const champ of bloc.querySelectorAll('input')) champ.required = !dejaConnecte;
+}
+
+/** Crée le compte si besoin, puis exécute la suite. Séparé du reste parce que
+ *  les deux formulaires (créer / rejoindre) en ont exactement besoin. */
+async function assurerCompte(donnees) {
+  if (dejaConnecte) return;
+  const email = (donnees.get('email') || '').trim();
+  const motDePasse = donnees.get('motdepasse') || '';
+  if (!email || !motDePasse) throw new Error('Email et mot de passe sont nécessaires');
+  await db.inscrire(email, motDePasse);
+  dejaConnecte = true;
+}
+
+// — Création d'un espace ————————————————————————————————————————————
+
+function flotCreation(formulaire) {
+  return pendantEnvoi(formulaire, 'Création…', async () => {
+    const donnees = new FormData(formulaire);
+    const nom = (donnees.get('nom') || '').trim();
+    const pseudo = (donnees.get('pseudo') || '').trim();
+    if (!nom || !pseudo) throw new Error('Il manque ton pseudo ou le nom de l’espace');
+
+    await assurerCompte(donnees);
+    const cree = await db.creerEspace(
+      nom, pseudo, donnees.get('date_naissance'), donnees.get('date_mariage'));
+
+    appliquerEspace(cree);
+    formulaire.reset();
+    await entrerDansApp();
+  });
+}
+
+// — Rejoindre un espace ————————————————————————————————————————————
+
+// Ce qu'on retient entre la saisie du code et la validation du formulaire.
+const rejoindre = { jeton: '', membreId: null };
+
+/** Charge l'aperçu de l'espace et prépare l'écran « rejoindre ». */
+async function preparerRejoindre(jeton, retour = '#accueil-choix') {
+  const apercu = await db.apercuEspace(jeton).catch((e) => {
     toast(`Connexion impossible : ${e.message}`);
+    return undefined;
+  });
+  if (apercu === undefined) { afficherBloc(retour); return; }
+  if (!apercu) {
+    toast('Code inconnu — vérifie qu’il est complet');
     afficherBloc(retour);
+    return;
   }
+
+  rejoindre.jeton = jeton;
+  rejoindre.membreId = null;
+  $('#rejoindre-nom').textContent = apercu.espace_nom;
+
+  const formulaire = $('#accueil-rejoindre');
+  const champPseudo = formulaire.pseudo;
+  champPseudo.value = '';
+
+  // Membres créés avec la v1, encore sans compte : les proposer permet de
+  // récupérer son historique de tâches au lieu de repartir d'une page blanche.
+  const aReprendre = apercu.membres_a_reprendre || [];
+  const hote = vider($('#rejoindre-membres'));
+  montrer($('#rejoindre-reprise'), aReprendre.length > 0);
+  for (const m of aReprendre) {
+    hote.append(el('button', {
+      type: 'button',
+      class: 'btn btn-doux',
+      onclick: (e) => {
+        rejoindre.membreId = m.id;
+        champPseudo.value = m.pseudo;
+        for (const b of hote.children) b.classList.toggle('on', b === e.currentTarget);
+      },
+    }, `Je suis ${m.pseudo}`));
+  }
+  if (aReprendre.length) {
+    hote.append(el('button', {
+      type: 'button',
+      class: 'btn btn-doux',
+      onclick: (e) => {
+        rejoindre.membreId = null;
+        champPseudo.value = '';
+        for (const b of hote.children) b.classList.toggle('on', b === e.currentTarget);
+      },
+    }, 'Aucun des deux'));
+  }
+
+  if (!aReprendre.length && apercu.places_libres === 0) {
+    toast('Cet espace a déjà ses deux membres');
+    afficherBloc(retour);
+    return;
+  }
+
+  adapterChampsCompte(formulaire);
+  afficherBloc('#accueil-rejoindre');
 }
 
-async function choisirIdentite(membre) {
-  etat.membreId = membre.id;
-  enregistrerSession();
+function flotRejoindre(formulaire) {
+  return pendantEnvoi(formulaire, 'Un instant…', async () => {
+    const donnees = new FormData(formulaire);
+    const pseudo = (donnees.get('pseudo') || '').trim();
+    if (!pseudo) throw new Error('Choisis ton pseudo');
+
+    await assurerCompte(donnees);
+    const rejoint = await db.rejoindreEspace(
+      rejoindre.jeton, pseudo, donnees.get('date_naissance'), rejoindre.membreId);
+
+    appliquerEspace(rejoint);
+    formulaire.reset();
+    await entrerDansApp();
+  });
+}
+
+/** Retour commun de `creer_espace` et `rejoindre_espace`. */
+function appliquerEspace({ espace_id, espace_nom, jeton, membre_id }) {
+  etat.espaceId = espace_id;
+  etat.espaceNom = espace_nom;
+  etat.lienInvitation = jeton;
+  etat.membreId = membre_id;
   // On nettoie l'URL : recharger la page ne doit pas relancer l'écran « rejoindre ».
   history.replaceState(null, '', location.pathname);
+}
+
+// — Connexion, déconnexion, mot de passe ————————————————————————————
+
+function flotConnexion(formulaire) {
+  return pendantEnvoi(formulaire, 'Connexion…', async () => {
+    const donnees = new FormData(formulaire);
+    await db.connecter(donnees.get('email'), donnees.get('motdepasse'));
+    dejaConnecte = true;
+    formulaire.reset();
+    await reprendreSession();
+  });
+}
+
+function flotOubli(formulaire) {
+  return pendantEnvoi(formulaire, 'Envoi…', async () => {
+    await db.demanderNouveauMotDePasse(new FormData(formulaire).get('email'));
+    formulaire.reset();
+    toast('Lien envoyé — regarde ta boîte mail');
+    afficherBloc('#accueil-connexion');
+  });
+}
+
+function flotNouveauMotDePasse(formulaire) {
+  return pendantEnvoi(formulaire, 'Enregistrement…', async () => {
+    await db.definirMotDePasse(new FormData(formulaire).get('motdepasse'));
+    formulaire.reset();
+    history.replaceState(null, '', location.pathname);
+    toast('Mot de passe enregistré');
+    await reprendreSession();
+  });
+}
+
+async function seDeconnecter() {
+  if (desabonner) { desabonner(); desabonner = null; }
+  await db.deconnecter();
+  dejaConnecte = false;
+  oublierSession();
+  afficherBloc('#accueil-choix');
+}
+
+/** Une fois connecté : soit le compte a un espace et on entre, soit il n'en a
+ *  pas encore et on propose d'en créer ou d'en rejoindre un. */
+async function reprendreSession() {
+  const membre = await db.monMembre();
+  if (!membre) {
+    if (rejoindre.jeton) { await preparerRejoindre(rejoindre.jeton, '#accueil-sans-espace'); return; }
+    afficherBloc('#accueil-sans-espace');
+    return;
+  }
+  const espace = await db.espaceParId(membre.espace_id);
+  etat.espaceId = membre.espace_id;
+  etat.membreId = membre.id;
+  etat.espaceNom = espace?.nom || '';
+  etat.lienInvitation = espace?.lien_invitation || '';
   await entrerDansApp();
 }
 
@@ -166,20 +303,39 @@ function basculerModule(nom) {
 
 function brancherEvenements() {
   // — Onboarding
-  $('[data-action="ouvrir-creation"]').addEventListener('click', () => afficherBloc('#accueil-creation'));
-  for (const b of $$('[data-action="retour-accueil"]')) {
-    b.addEventListener('click', () => afficherBloc('#accueil-choix'));
+  for (const b of $$('[data-action="ouvrir-creation"]')) {
+    b.addEventListener('click', () => {
+      adapterChampsCompte($('#accueil-creation'));
+      afficherBloc('#accueil-creation');
+    });
   }
-  $('#accueil-creation').addEventListener('submit', (e) => {
-    e.preventDefault();
-    flotCreation(e.currentTarget);
-  });
-  $('[data-action="ouvrir-code"]').addEventListener('click', () => afficherBloc('#accueil-code'));
-  $('#accueil-code').addEventListener('submit', (e) => {
-    e.preventDefault();
-    const jeton = extraireJeton(e.currentTarget.code.value);
+  for (const b of $$('[data-action="ouvrir-code"]')) {
+    b.addEventListener('click', () => afficherBloc('#accueil-code'));
+  }
+  for (const b of $$('[data-action="ouvrir-connexion"]')) {
+    b.addEventListener('click', () => afficherBloc('#accueil-connexion'));
+  }
+  $('[data-action="ouvrir-oubli"]').addEventListener('click', () => afficherBloc('#accueil-oubli'));
+  $('[data-action="deconnexion"]').addEventListener('click', seDeconnecter);
+  for (const b of $$('[data-action="retour-accueil"]')) {
+    b.addEventListener('click', () => afficherBloc(dejaConnecte ? '#accueil-sans-espace' : '#accueil-choix'));
+  }
+
+  const surSoumission = (selecteur, gestionnaire) => {
+    $(selecteur).addEventListener('submit', (e) => {
+      e.preventDefault();
+      gestionnaire(e.currentTarget);
+    });
+  };
+  surSoumission('#accueil-connexion', flotConnexion);
+  surSoumission('#accueil-oubli', flotOubli);
+  surSoumission('#accueil-nouveau-mdp', flotNouveauMotDePasse);
+  surSoumission('#accueil-creation', flotCreation);
+  surSoumission('#accueil-rejoindre', flotRejoindre);
+  surSoumission('#accueil-code', (formulaire) => {
+    const jeton = extraireJeton(formulaire.code.value);
     if (!jeton) { toast('Entre le code de l’espace'); return; }
-    flotRejoindre(jeton, '#accueil-code');
+    preparerRejoindre(jeton, '#accueil-code');
   });
 
   // — Barre d'onglets
@@ -253,44 +409,23 @@ async function partagerLien() {
 }
 
 function ouvrirReglages() {
-  const changerIdentite = () => {
-    const hote = el('div', { class: 'choix-membres' });
-    for (const m of etat.membres) {
-      hote.append(el('button', {
-        class: `btn ${m.id === etat.membreId ? 'btn-primaire' : 'btn-doux'}`,
-        onclick: () => {
-          etat.membreId = m.id;
-          enregistrerSession();
-          fermerFeuille();
-          rendreTout();
-          toast(`Bonjour ${m.prenom} !`);
-        },
-      }, m.prenom));
-    }
-    ouvrirFeuille(el('div', {}, el('h2', {}, 'Qui es-tu ?'), hote,
-      el('button', { class: 'btn btn-discret', onclick: fermerFeuille }, 'Annuler')));
-  };
-
   const quitter = async () => {
     fermerFeuille();
     const oui = await confirmer('Se déconnecter de cet appareil ?', {
-      detail: 'Les données restent en ligne. Il faudra le lien d’invitation pour revenir.',
+      detail: 'Les données restent en ligne. Il faudra ton email et ton mot de passe pour revenir.',
       texteOk: 'Se déconnecter', danger: true,
     });
     if (!oui) return;
-    if (desabonner) { desabonner(); desabonner = null; }
-    effacerSession();
-    afficherBloc('#accueil-choix');
+    await seDeconnecter();
   };
 
   ouvrirFeuille(el('div', {},
     el('h2', {}, etat.espaceNom || 'Notre espace'),
     el('p', { class: 'recap' },
-      el('strong', {}, 'Connecté·e en tant que : '), prenomDe(etat.membreId) || '—', el('br'),
-      el('strong', {}, 'Membres : '), etat.membres.map((m) => m.prenom).join(' et ')),
+      el('strong', {}, 'Connecté·e en tant que : '), pseudoDe(etat.membreId) || '—', el('br'),
+      el('strong', {}, 'Membres : '), etat.membres.map((m) => m.pseudo).join(' et ')),
 
     el('button', { class: 'btn btn-primaire', onclick: partagerLien }, 'Envoyer le lien d’invitation'),
-    el('button', { class: 'btn btn-doux', onclick: changerIdentite }, 'Changer de personne'),
 
     el('div', { class: 'separateur' }),
     el('label', { class: 'champ' },
@@ -335,23 +470,32 @@ async function demarrer() {
   brancherEvenements();
   installerServiceWorker();
 
-  const jeton = new URLSearchParams(location.search).get('rejoindre');
-  if (jeton) { await flotRejoindre(jeton); return; }
+  // Le lien « mot de passe oublié » ramène ici avec un jeton de récupération
+  // dans l'adresse. Supabase l'échange contre une session et prévient par cet
+  // événement : c'est le seul moment où on affiche l'écran de nouveau mot de
+  // passe, sinon la personne se retrouverait dans l'app sans l'avoir choisi.
+  let recuperation = /type=recovery/.test(location.hash);
+  db.sb.auth.onAuthStateChange((evenement) => {
+    if (evenement !== 'PASSWORD_RECOVERY') return;
+    recuperation = true;
+    dejaConnecte = true;
+    afficherBloc('#accueil-nouveau-mdp');
+  });
 
-  if (chargerSession()) {
-    await entrerDansApp();
-    // Le nom de l'espace peut avoir changé, ou n'avoir jamais été mémorisé.
-    if (!etat.lienInvitation || !etat.espaceNom) {
-      const espace = await db.espaceParId(etat.espaceId).catch(() => null);
-      if (espace) {
-        etat.espaceNom = espace.nom;
-        etat.lienInvitation = espace.lien_invitation;
-        enregistrerSession();
-      }
-    }
-    return;
+  // Mémorisé avant tout : la personne invitée doit atterrir sur le bon espace,
+  // qu'elle ait déjà un compte ou qu'elle vienne de le créer.
+  rejoindre.jeton = extraireJeton(new URLSearchParams(location.search).get('rejoindre'));
+
+  try {
+    const session = await db.sessionCourante();
+    dejaConnecte = Boolean(session);
+    if (recuperation) { afficherBloc('#accueil-nouveau-mdp'); return; }
+    if (session) { await reprendreSession(); return; }
+  } catch (e) {
+    toast(`Connexion impossible : ${e.message}`);
   }
 
+  if (rejoindre.jeton) { await preparerRejoindre(rejoindre.jeton); return; }
   afficherBloc('#accueil-choix');
 }
 

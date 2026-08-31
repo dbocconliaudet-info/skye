@@ -1,12 +1,13 @@
-// État de l'application + ce qui est mémorisé sur l'appareil.
+// État de l'application.
 //
-// Le brief prévoit une identification légère : on retient l'espace et le membre
-// choisi dans le localStorage du téléphone, sans mot de passe.
-
-const CLE_STOCKAGE = 'todomtadam.session';
+// Depuis la v2, l'identité ne vit plus dans le localStorage de l'app : c'est
+// Supabase Auth qui garde la session sur l'appareil et la renouvelle seul.
+// L'espace et le membre sont relus depuis la base à chaque démarrage — une
+// seule source de vérité, donc plus de risque qu'un appareil garde en mémoire
+// un membre qui n'existe plus.
 
 export const etat = {
-  // Session (persistée)
+  // Session (relue au démarrage depuis Supabase)
   espaceId: null,
   espaceNom: '',
   lienInvitation: '',
@@ -26,40 +27,8 @@ export const etat = {
   listeActiveId: null,
 };
 
-export function chargerSession() {
-  try {
-    const brut = localStorage.getItem(CLE_STOCKAGE);
-    if (!brut) return false;
-    const s = JSON.parse(brut);
-    if (!s.espaceId || !s.membreId) return false;
-    Object.assign(etat, {
-      espaceId: s.espaceId,
-      espaceNom: s.espaceNom || '',
-      lienInvitation: s.lienInvitation || '',
-      membreId: s.membreId,
-    });
-    return true;
-  } catch {
-    return false;   // stockage corrompu ou désactivé : on repart de l'accueil
-  }
-}
-
-export function enregistrerSession() {
-  try {
-    localStorage.setItem(CLE_STOCKAGE, JSON.stringify({
-      espaceId: etat.espaceId,
-      espaceNom: etat.espaceNom,
-      lienInvitation: etat.lienInvitation,
-      membreId: etat.membreId,
-    }));
-  } catch {
-    // Mode navigation privée : l'app reste utilisable, simplement il faudra
-    // rechoisir son prénom à la prochaine ouverture.
-  }
-}
-
-export function effacerSession() {
-  try { localStorage.removeItem(CLE_STOCKAGE); } catch { /* sans conséquence */ }
+/** Remet l'état à zéro à la déconnexion, sans toucher aux préférences d'affichage. */
+export function oublierSession() {
   Object.assign(etat, {
     espaceId: null, espaceNom: '', lienInvitation: '', membreId: null,
     membres: [], taches: [], listes: [], articles: [], dico: new Map(),
@@ -68,8 +37,10 @@ export function effacerSession() {
 }
 
 export const membreParId = (id) => etat.membres.find((m) => m.id === id) || null;
-export const prenomDe = (id) => (membreParId(id) || {}).prenom || '';
+export const pseudoDe = (id) => (membreParId(id) || {}).pseudo || '';
 export const moi = () => membreParId(etat.membreId);
+/** L'autre membre de l'espace, ou null tant qu'il n'a pas rejoint. */
+export const partenaire = () => etat.membres.find((m) => m.id !== etat.membreId) || null;
 
 export const listeParId = (id) => etat.listes.find((l) => l.id === id) || null;
 export const listePermanente = () => etat.listes.find((l) => l.type === 'permanente') || null;

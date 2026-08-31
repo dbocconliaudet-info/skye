@@ -5,7 +5,17 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { SUPABASE_URL, SUPABASE_CLE_PUBLIQUE } from './config.js';
 
 export const sb = createClient(SUPABASE_URL, SUPABASE_CLE_PUBLIQUE, {
-  auth: { persistSession: false },
+  auth: {
+    // La session vit désormais sur l'appareil et se renouvelle toute seule :
+    // c'est ce qui évite de retaper son mot de passe à chaque ouverture.
+    // La durée maximale, elle, se règle dans le tableau de bord Supabase.
+    persistSession: true,
+    autoRefreshToken: true,
+    // Nécessaire pour le lien « mot de passe oublié », qui revient dans l'app
+    // avec un jeton de récupération dans l'adresse.
+    detectSessionInUrl: true,
+    storageKey: 'todomtadam.auth',
+  },
   realtime: { params: { eventsPerSecond: 5 } },
 });
 
@@ -15,46 +25,108 @@ function ok({ data, error }) {
   return data;
 }
 
+// ── Comptes ────────────────────────────────────────────────────────────────
+
+/** Traduit les messages d'erreur de Supabase Auth, qui arrivent en anglais. */
+function messageAuth(erreur) {
+  const brut = erreur?.message || '';
+  if (/Invalid login credentials/i.test(brut)) return 'Email ou mot de passe incorrect';
+  if (/Email not confirmed/i.test(brut)) return 'Cet email n’a pas encore été confirmé';
+  if (/User already registered|already been registered/i.test(brut)) {
+    return 'Un compte existe déjà avec cet email — utilise « Se connecter »';
+  }
+  if (/Password should be at least/i.test(brut)) return 'Mot de passe trop court (6 caractères minimum)';
+  if (/Unable to validate email|invalid format/i.test(brut)) return 'Cette adresse email n’est pas valide';
+  if (/rate limit|too many/i.test(brut)) return 'Trop de tentatives — réessaie dans quelques minutes';
+  return brut || 'Connexion impossible';
+}
+
+export async function inscrire(email, motDePasse) {
+  const { data, error } = await sb.auth.signUp({ email: email.trim(), password: motDePasse });
+  if (error) throw new Error(messageAuth(error));
+  // Si la confirmation d'email est restée active côté Supabase, il n'y a pas
+  // de session : l'app doit le dire clairement plutôt que d'échouer plus loin.
+  if (!data.session) {
+    throw new Error('Compte créé — confirme ton email, puis reviens te connecter');
+  }
+  return data.session;
+}
+
+export async function connecter(email, motDePasse) {
+  const { data, error } = await sb.auth.signInWithPassword({
+    email: email.trim(), password: motDePasse,
+  });
+  if (error) throw new Error(messageAuth(error));
+  return data.session;
+}
+
+export async function deconnecter() {
+  await sb.auth.signOut();
+}
+
+export async function sessionCourante() {
+  const { data } = await sb.auth.getSession();
+  return data.session || null;
+}
+
+/** Envoie le lien de réinitialisation, qui ramène sur cette même page. */
+export async function demanderNouveauMotDePasse(email) {
+  const retour = `${location.origin}${location.pathname}`;
+  const { error } = await sb.auth.resetPasswordForEmail(email.trim(), { redirectTo: retour });
+  if (error) throw new Error(messageAuth(error));
+}
+
+export async function definirMotDePasse(motDePasse) {
+  const { error } = await sb.auth.updateUser({ password: motDePasse });
+  if (error) throw new Error(messageAuth(error));
+}
+
 // ── Espaces et membres ─────────────────────────────────────────────────────
 
-function jetonAleatoire(longueur = 22) {
-  const alphabet = 'abcdefghijkmnopqrstuvwxyz23456789';   // sans caractères ambigus
-  const octets = crypto.getRandomValues(new Uint8Array(longueur));
-  return [...octets].map((o) => alphabet[o % alphabet.length]).join('');
-}
-
-export async function creerEspace(nom, prenom1, prenom2) {
-  const espace = ok(await sb.from('espaces')
-    .insert({ nom, lien_invitation: jetonAleatoire() })
-    .select().single());
-
-  const membres = ok(await sb.from('membres')
-    .insert([
-      { espace_id: espace.id, prenom: prenom1 },
-      { espace_id: espace.id, prenom: prenom2 },
-    ])
-    .select());
-
-  // Liste de courses permanente, créée d'office (§7 : toujours présente).
-  ok(await sb.from('listes_courses')
-    .insert({ espace_id: espace.id, nom: 'Liste permanente', type: 'permanente' }));
-
-  return { espace, membres };
-}
-
-export async function espaceParJeton(jeton) {
-  const { data, error } = await sb.from('espaces')
-    .select('id, nom, lien_invitation').eq('lien_invitation', jeton).maybeSingle();
+/** Le membre lié au compte connecté, ou null si le compte n'a pas encore
+ *  d'espace (inscription interrompue avant l'étape suivante). */
+export async function monMembre() {
+  const { data: { user } } = await sb.auth.getUser();
+  if (!user) return null;
+  const { data, error } = await sb.from('membres')
+    .select('*').eq('user_id', user.id).maybeSingle();
   if (error) throw new Error(error.message);
   return data;
 }
+
+export const creerEspace = async (nom, pseudo, dateNaissance, dateMariage) =>
+  ok(await sb.rpc('creer_espace', {
+    p_nom: nom,
+    p_pseudo: pseudo,
+    p_date_naissance: dateNaissance || null,
+    p_date_mariage: dateMariage || null,
+  }));
+
+/** Nom de l'espace et membres encore sans compte, pour l'écran « rejoindre ».
+ *  Renvoie null si le code ne correspond à aucun espace. */
+export const apercuEspace = async (jeton) =>
+  ok(await sb.rpc('apercu_espace', { p_jeton: jeton }));
+
+export const rejoindreEspace = async (jeton, pseudo, dateNaissance, membreId) =>
+  ok(await sb.rpc('rejoindre_espace', {
+    p_jeton: jeton,
+    p_pseudo: pseudo,
+    p_date_naissance: dateNaissance || null,
+    p_membre_id: membreId || null,
+  }));
 
 export async function espaceParId(id) {
   const { data, error } = await sb.from('espaces')
-    .select('id, nom, lien_invitation').eq('id', id).maybeSingle();
+    .select('id, nom, lien_invitation, date_mariage_pacs').eq('id', id).maybeSingle();
   if (error) throw new Error(error.message);
   return data;
 }
+
+export const majEspace = async (id, patch) =>
+  ok(await sb.from('espaces').update(patch).eq('id', id).select().single());
+
+export const majMembre = async (id, patch) =>
+  ok(await sb.from('membres').update(patch).eq('id', id).select().single());
 
 export const chargerMembres = async (espaceId) =>
   ok(await sb.from('membres').select('*').eq('espace_id', espaceId).order('cree_le'));
