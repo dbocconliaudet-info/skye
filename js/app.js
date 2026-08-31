@@ -1,7 +1,10 @@
 // Point d'entrée : onboarding, navigation, chargement des données, temps réel.
 
-import { $, $$, el, vider, montrer, toast, ouvrirFeuille, fermerFeuille, confirmer, feuilleEstOuverte } from './ui.js';
-import { etat, oublierSession, pseudoDe } from './etat.js';
+import {
+  $, $$, el, vider, montrer, toast, ouvrirFeuille, fermerFeuille, confirmer,
+  feuilleEstOuverte, formaterDate,
+} from './ui.js';
+import { etat, oublierSession, pseudoDe, moi, partenaire } from './etat.js';
 import * as db from './db.js';
 import { rendreTaches, ouvrirNouvelleTache, genererOccurrencesDues } from './taches.js';
 import { rendreCourses, ajouterDepuisTexte } from './courses.js';
@@ -253,16 +256,28 @@ async function entrerDansApp() {
 
   if (desabonner) desabonner();
   desabonner = db.abonner(etat.espaceId, planifierRechargement);
+
+  // Après le board, pas avant : un mot doux sur un écran encore vide tomberait
+  // à plat, et on a besoin des pseudos chargés pour nommer son auteur.
+  afficherMotsRecus();
 }
 
 async function rechargerDonnees() {
-  const [membres, taches, listes, articles, dico] = await Promise.all([
+  const [espace, membres, taches, listes, articles, dico] = await Promise.all([
+    db.espaceParId(etat.espaceId),
     db.chargerMembres(etat.espaceId),
     db.chargerTaches(etat.espaceId),
     db.chargerListes(etat.espaceId),
     db.chargerArticles(etat.espaceId),
     db.chargerDico(etat.espaceId),
   ]);
+  // Relire l'espace à chaque fois évite de traîner un nom ou une date modifiés
+  // depuis l'autre téléphone : ces trois champs ne passent pas par le temps réel.
+  if (espace) {
+    etat.espaceNom = espace.nom;
+    etat.lienInvitation = espace.lien_invitation;
+    etat.dateMariage = espace.date_mariage_pacs || '';
+  }
   etat.membres = membres;
   etat.taches = taches;
   etat.listes = listes;
@@ -351,6 +366,13 @@ function brancherEvenements() {
       rendreTaches();
     });
   }
+  for (const b of $$('[data-groupement]')) {
+    b.addEventListener('click', () => {
+      etat.groupement = b.dataset.groupement;
+      for (const autre of $$('[data-groupement]')) autre.classList.toggle('on', autre === b);
+      rendreTaches();
+    });
+  }
   for (const b of $$('[data-filtre-histo]')) {
     b.addEventListener('click', () => {
       etat.filtreHisto = b.dataset.filtreHisto;
@@ -377,8 +399,13 @@ function brancherEvenements() {
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && feuilleEstOuverte()) fermerFeuille(); });
 
   // — Retour dans l'app après un passage en arrière-plan : on resynchronise.
+  //   Sur un téléphone, l'app n'est presque jamais fermée pour de bon : c'est
+  //   ce retour-là, et pas le démarrage à froid, qui fait office d'« ouverture »
+  //   pour les mots du/de la partenaire.
   document.addEventListener('visibilitychange', () => {
-    if (!document.hidden && etat.espaceId) planifierRechargement();
+    if (document.hidden || !etat.espaceId) return;
+    planifierRechargement();
+    afficherMotsRecus();
   });
 }
 
@@ -408,6 +435,119 @@ async function partagerLien() {
   }
 }
 
+// ══════════════════ Mot au/à la partenaire ══════════════════
+
+/** Affiche les mots non lus, un par un, à l'ouverture de l'app (§4 des
+ *  évolutions). Rien n'est montré si une feuille est déjà ouverte : un mot doux
+ *  qui recouvre une tâche en cours de saisie raterait complètement son effet. */
+async function afficherMotsRecus() {
+  if (!etat.espaceId || !etat.membreId || feuilleEstOuverte()) return;
+  let mots;
+  try {
+    mots = await db.messagesPourMoi(etat.espaceId, etat.membreId);
+  } catch {
+    return;   // réseau capricieux : le mot attendra la prochaine ouverture
+  }
+  for (const mot of mots) await montrerMot(mot);
+}
+
+/** Résout une fois le mot fermé et marqué lu. Si le marquage échoue, le mot
+ *  reste non lu et réapparaîtra — mieux vaut le revoir que le perdre. */
+function montrerMot(mot) {
+  return new Promise((resolve) => {
+    let traite = false;
+    const auFermer = async () => {
+      if (traite) return;
+      traite = true;
+      await db.marquerMessageLu(mot.id).catch(() => { /* il reviendra */ });
+      resolve();
+    };
+    ouvrirFeuille(el('div', { class: 'mot' },
+      el('p', { class: 'mot-de' }, `Un mot de ${pseudoDe(mot.auteur_membre_id) || 'ton/ta partenaire'}`),
+      el('p', { class: 'mot-contenu' }, mot.contenu),
+      el('button', { class: 'btn btn-primaire', onclick: fermerFeuille }, 'Merci ♥'),
+    ), { auFermer });
+  });
+}
+
+function ouvrirEcritureMot() {
+  const autre = partenaire();
+  if (!autre) { toast('Personne n’a encore rejoint ton espace'); return; }
+
+  const champ = el('textarea', { rows: 4, maxlength: 500, placeholder: 'Ton petit mot…' });
+
+  const envoyer = async (e) => {
+    const contenu = champ.value.trim();
+    if (!contenu) { toast('Le mot est vide'); return; }
+    const bouton = e.currentTarget;
+    bouton.disabled = true;
+    bouton.textContent = 'Envoi…';
+    try {
+      await db.envoyerMessage(etat.espaceId, etat.membreId, autre.id, contenu);
+      fermerFeuille();
+      toast(`Ton mot attend ${autre.pseudo}`);
+    } catch (err) {
+      toast(`Envoi impossible : ${err.message}`);
+      bouton.disabled = false;
+      bouton.textContent = 'Envoyer';
+    }
+  };
+
+  ouvrirFeuille(el('div', {},
+    el('h2', {}, `Un mot pour ${autre.pseudo}`),
+    el('p', { class: 'feuille-info' },
+      `Il s’affichera à sa prochaine ouverture de l’app, une seule fois. `
+      + `Ni toi ni ${autre.pseudo} ne pourrez le relire ensuite — c’est fait pour.`),
+    el('label', { class: 'champ' }, el('span', {}, 'Ton message'), champ),
+    el('button', { class: 'btn btn-primaire', onclick: envoyer }, 'Envoyer'),
+    el('button', { class: 'btn btn-discret', onclick: fermerFeuille }, 'Annuler'),
+  ));
+}
+
+// ══════════════════ Réglages ══════════════════
+
+/** Section « Nos dates » des réglages (§2 des évolutions). La date de naissance
+ *  de l'autre s'affiche sans être modifiable : la base refuse d'ailleurs qu'on
+ *  touche la ligne de quelqu'un d'autre, autant que l'écran le dise. */
+function sectionDates() {
+  const moiMeme = moi();
+  const autre = partenaire();
+
+  const champNaissance = el('input', { type: 'date', value: moiMeme?.date_naissance || '' });
+  const champMariage = el('input', { type: 'date', value: etat.dateMariage || '' });
+
+  const enregistrer = async (e) => {
+    const bouton = e.currentTarget;
+    bouton.disabled = true;
+    bouton.textContent = 'Enregistrement…';
+    try {
+      await Promise.all([
+        db.majMembre(etat.membreId, { date_naissance: champNaissance.value || null }),
+        db.majEspace(etat.espaceId, { date_mariage_pacs: champMariage.value || null }),
+      ]);
+      await rechargerDonnees();
+      fermerFeuille();
+      toast('Dates enregistrées');
+    } catch (err) {
+      toast(`Enregistrement impossible : ${err.message}`);
+      bouton.disabled = false;
+      bouton.textContent = 'Enregistrer les dates';
+    }
+  };
+
+  return el('div', {},
+    el('h3', { class: 'feuille-titre' }, 'Nos dates'),
+    el('label', { class: 'champ' }, el('span', {}, 'Ta date de naissance'), champNaissance),
+    autre?.date_naissance
+      ? el('p', { class: 'feuille-info' },
+        `Date de naissance de ${autre.pseudo} : ${formaterDate(autre.date_naissance)}.`)
+      : null,
+    el('label', { class: 'champ' },
+      el('span', {}, 'Votre date de mariage ou de PACS'), champMariage),
+    el('button', { class: 'btn btn-doux', onclick: enregistrer }, 'Enregistrer les dates'),
+  );
+}
+
 function ouvrirReglages() {
   const quitter = async () => {
     fermerFeuille();
@@ -426,6 +566,13 @@ function ouvrirReglages() {
       el('strong', {}, 'Membres : '), etat.membres.map((m) => m.pseudo).join(' et ')),
 
     el('button', { class: 'btn btn-primaire', onclick: partagerLien }, 'Envoyer le lien d’invitation'),
+    partenaire()
+      ? el('button', { class: 'btn btn-doux', onclick: ouvrirEcritureMot },
+        `Écrire un mot à ${partenaire().pseudo}`)
+      : null,
+
+    el('div', { class: 'separateur' }),
+    sectionDates(),
 
     el('div', { class: 'separateur' }),
     el('label', { class: 'champ' },

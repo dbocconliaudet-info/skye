@@ -135,10 +135,17 @@ JavaScript exigent un vrai serveur (`http://`, pas `file://`).
 
 ---
 
-## Ce que fait ce premier livrable
+## Ce que fait l'app
+
+**Comptes et espace**
+- Un compte email + mot de passe par personne, avec un pseudo affiché partout
+- Mot de passe oublié : chacun reçoit son lien à sa propre adresse
+- La base ne répond qu'aux comptes authentifiés, et chacun ne voit que son espace
+- Dates de naissance et date de mariage / PACS, modifiables dans les Réglages
 
 **Module « On s'en occupe »**
-- Board à 3 colonnes qui défilent : chacun des deux membres + « Les deux »
+- Board à colonnes qui défilent, regroupables par personne, par catégorie ou
+  par priorité
 - Onglets *À faire / En cours* et *Historique* (filtrable Fait / Devenu sans objet)
 - Titre, description, catégorie, priorité, échéance, assignation
 - Statut à faire → en cours → fait, avec note de clôture, qui et quand
@@ -154,6 +161,10 @@ JavaScript exigent un vrai serveur (`http://`, pas `file://`).
   trois articles ; « 500 g de farine » et « pommes x3 » remplissent la quantité
 - Clôture d'une liste ponctuelle, historique consultable, duplication en un geste
 
+**Un mot à son/sa partenaire**
+- S'écrit depuis les Réglages ⚙, s'affiche à la prochaine ouverture de l'app
+- Se lit une fois et disparaît : pas d'historique, c'est voulu
+
 Le tout se synchronise en direct entre les deux téléphones.
 
 ### Ce qui n'y est pas encore
@@ -166,9 +177,9 @@ Le tout se synchronise en direct entre les deux téléphones.
   reporté au prochain tour. Les tâches récurrentes, elles, fonctionnent :
   chaque occurrence apparaît toute seule à sa date, sans serveur.
 - **Module Documents** et **module Agenda** : hors périmètre v1 (§8).
-- Des évolutions v2, seuls les **comptes** et la **Row Level Security** sont
-  faits. Restent à venir : la modification des dates dans les Réglages, les
-  filtres « Regrouper par » du board, et le mot au/à la partenaire.
+- Des évolutions v2, la **connexion par Face ID / Touch ID** (passkeys) reste à
+  faire — le document la range explicitement en phase 2, à n'ouvrir qu'une fois
+  le mot de passe éprouvé à l'usage.
 
 ---
 

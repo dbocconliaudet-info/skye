@@ -160,6 +160,15 @@ input,select,textarea{font-family:inherit;font-size:16px;color:inherit;} /* 16px
 .puce.on{background:var(--poppy);color:#fff;}
 .puce.puce-ajout{color:var(--poppy-dark);border:1px dashed var(--gris-clair);background:transparent;}
 
+/* Le sélecteur de regroupement reste au-dessus du filtre d'historique, donc
+   deux rangées de puces peuvent se suivre : celle-ci est allégée pour que la
+   hiérarchie reste lisible. */
+.groupement{align-items:center;padding-bottom:0;}
+.filtres-libelle{
+  font-size:11px;font-weight:700;color:var(--gris);opacity:.7;
+  white-space:nowrap;flex-shrink:0;margin-right:2px;
+}
+
 /* ══════════════════ Module « On s'en occupe » ══════════════════ */
 
 .colonnes{
@@ -318,6 +327,22 @@ input,select,textarea{font-family:inherit;font-size:16px;color:inherit;} /* 16px
 .feuille .btn{margin-top:9px;}
 .feuille .separateur{height:1px;background:var(--gris-clair);margin:18px 0 14px;opacity:.55;}
 .feuille-info{font-size:12.5px;color:var(--gris);line-height:1.55;margin:0 4px 12px;}
+.feuille-titre{
+  font-family:'Quicksand',sans-serif;font-weight:700;font-size:15px;
+  color:var(--poppy-dark);margin:0 4px 12px;
+}
+
+/* Le mot du/de la partenaire : centré et respirant, pour qu'il ne ressemble
+   à aucun autre écran de l'app — c'est une parenthèse, pas une notification. */
+.mot{text-align:center;padding:10px 4px 0;}
+.mot-de{
+  font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
+  color:var(--gris);margin:0 0 16px;
+}
+.mot-contenu{
+  font-family:'Quicksand',sans-serif;font-size:21px;font-weight:500;
+  line-height:1.5;color:var(--ink);margin:0 0 26px;white-space:pre-wrap;
+}
 
 /* Groupe de choix (assignation, priorité, statut, catégorie…) */
 .options{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:14px;}

@@ -11,6 +11,7 @@ export const etat = {
   espaceId: null,
   espaceNom: '',
   lienInvitation: '',
+  dateMariage: '',
   membreId: null,
 
   // Données chargées depuis Supabase
@@ -24,13 +25,14 @@ export const etat = {
   module: 'taches',          // 'taches' | 'courses'
   ongletTaches: 'actives',   // 'actives' | 'historique'
   filtreHisto: 'tout',       // 'tout' | 'fait' | 'sans_objet'
+  groupement: 'personne',    // 'personne' | 'categorie' | 'priorite'
   listeActiveId: null,
 };
 
 /** Remet l'état à zéro à la déconnexion, sans toucher aux préférences d'affichage. */
 export function oublierSession() {
   Object.assign(etat, {
-    espaceId: null, espaceNom: '', lienInvitation: '', membreId: null,
+    espaceId: null, espaceNom: '', lienInvitation: '', dateMariage: '', membreId: null,
     membres: [], taches: [], listes: [], articles: [], dico: new Map(),
     listeActiveId: null,
   });

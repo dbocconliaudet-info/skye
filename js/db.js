@@ -198,6 +198,33 @@ export const apprendreRayon = async (espaceId, mot, rayon) =>
   ok(await sb.from('dictionnaire_rayons')
     .upsert({ espace_id: espaceId, mot, rayon }, { onConflict: 'espace_id,mot' }));
 
+// ── Mots au/à la partenaire ────────────────────────────────────────────────
+
+/** Les mots non lus qui me sont adressés. La base filtre déjà sur le
+ *  destinataire — la policy de lecture ne renvoie rien d'autre — mais on le
+ *  redit ici pour que la requête soit lisible sans connaître le schéma. */
+export const messagesPourMoi = async (espaceId, membreId) =>
+  ok(await sb.from('messages')
+    .select('*')
+    .eq('espace_id', espaceId)
+    .eq('lu', false)
+    .or(`destinataire_membre_id.eq.${membreId},destinataire_les_deux.is.true`)
+    .order('cree_le'));
+
+export const envoyerMessage = async (espaceId, auteurId, destinataireId, contenu) =>
+  ok(await sb.from('messages').insert({
+    espace_id: espaceId,
+    auteur_membre_id: auteurId,
+    destinataire_membre_id: destinataireId,
+    contenu,
+  }));
+
+/** Un mot lu disparaît définitivement (§4 des évolutions : pas d'historique).
+ *  On marque plutôt que de supprimer : l'auteur garde ainsi la trace côté base
+ *  qu'il l'a bien envoyé, sans que personne puisse le relire dans l'app. */
+export const marquerMessageLu = async (id) =>
+  ok(await sb.from('messages').update({ lu: true }).eq('id', id));
+
 // ── Temps réel ─────────────────────────────────────────────────────────────
 
 /** S'abonne aux modifications de l'espace. `auChangement(table)` est appelé à
