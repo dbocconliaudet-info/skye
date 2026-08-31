@@ -86,7 +86,23 @@ export async function genererOccurrencesDues() {
 
 // ══════════════════ Sélection et tri ══════════════════
 
-function colonnes() {
+/** Colonnes du board selon le mode de regroupement choisi (§3 des évolutions).
+ *  `visibles` sert au mode Catégorie, seul à masquer ses colonnes vides : une
+ *  colonne « Vacances » vide neuf mois par an ferait défiler pour rien. */
+function colonnes(visibles) {
+  if (etat.groupement === 'categorie') {
+    const utilisees = new Set(visibles.map((t) => t.categorie));
+    return CATEGORIES
+      .filter((c) => utilisees.has(c.cle))
+      .map((c) => ({ cle: c.cle, titre: c.libelle }));
+  }
+
+  if (etat.groupement === 'priorite') {
+    // De la plus urgente à la moins urgente : on lit un board de gauche à
+    // droite, autant y trouver ce qui presse en premier.
+    return [...PRIORITES].reverse().map((p) => ({ cle: p.cle, titre: p.libelle }));
+  }
+
   const [m1, m2] = etat.membres;
   return [
     m1 && { cle: m1.id, titre: m1.pseudo },
@@ -96,6 +112,8 @@ function colonnes() {
 }
 
 function colonneDe(t) {
+  if (etat.groupement === 'categorie') return t.categorie;
+  if (etat.groupement === 'priorite') return t.priorite;
   if (t.assigne_aux_deux || !t.assigne_a) return 'deux';
   return t.assigne_a;
 }
@@ -144,7 +162,14 @@ export function rendreTaches() {
     return;
   }
 
-  for (const col of colonnes()) {
+  const cols = colonnes(visibles);
+  if (!cols.length) {
+    hote.append(el('p', { class: 'colonne-vide' },
+      etat.ongletTaches === 'historique' ? 'Rien encore ici.' : 'Rien à faire. Profitez-en !'));
+    return;
+  }
+
+  for (const col of cols) {
     const lot = trier(visibles.filter((t) => colonneDe(t) === col.cle));
     const boite = el('div', { class: 'colonne' },
       el('h3', {}, col.titre, el('span', { class: 'compteur' }, String(lot.length))),
