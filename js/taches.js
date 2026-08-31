@@ -4,7 +4,7 @@ import {
   $, el, vider, montrer, toast, ouvrirFeuille, fermerFeuille, confirmer, groupeOptions,
   aujourdhui, versIso, depuisIso, formaterDate, formaterDateHeure, joursRestants, ajouterDelai,
 } from './ui.js';
-import { etat, prenomDe } from './etat.js';
+import { etat, pseudoDe } from './etat.js';
 import { CATEGORIES, PRIORITES, STATUTS, FREQUENCES, libelleDe } from './config.js';
 import * as db from './db.js';
 
@@ -89,8 +89,8 @@ export async function genererOccurrencesDues() {
 function colonnes() {
   const [m1, m2] = etat.membres;
   return [
-    m1 && { cle: m1.id, titre: m1.prenom },
-    m2 && { cle: m2.id, titre: m2.prenom },
+    m1 && { cle: m1.id, titre: m1.pseudo },
+    m2 && { cle: m2.id, titre: m2.pseudo },
     { cle: 'deux', titre: 'Les deux' },
   ].filter(Boolean);
 }
@@ -175,7 +175,7 @@ function carte(t) {
   if (t.statut === 'en_cours') meta.push(el('span', { class: 'badge-statut' }, 'En cours'));
   if (t.devenu_sans_objet) meta.push(el('span', { class: 'badge-statut badge-neutre' }, 'Sans objet'));
   if (t.statut === 'fait' && t.termine_par) {
-    meta.push(el('span', {}, `Fait par ${prenomDe(t.termine_par)}`));
+    meta.push(el('span', {}, `Fait par ${pseudoDe(t.termine_par)}`));
   }
 
   return el('button', { class: classes.join(' '), onclick: () => ouvrirDetail(t.id) },
@@ -192,7 +192,7 @@ function ouvrirDetail(id) {
   if (!t) return;
 
   const assignation = t.assigne_aux_deux || !t.assigne_a
-    ? 'Les deux' : prenomDe(t.assigne_a);
+    ? 'Les deux' : pseudoDe(t.assigne_a);
 
   const infos = [
     ['Catégorie', libelleDe(CATEGORIES, t.categorie)],
@@ -200,8 +200,8 @@ function ouvrirDetail(id) {
     ['Priorité', libelleDe(PRIORITES, t.priorite)],
     t.date_limite && ['Échéance', formaterDate(t.date_limite)],
     t.recurrence && ['Récurrence', decrireRecurrence(t.recurrence)],
-    ['Créée par', `${prenomDe(t.cree_par) || 'quelqu’un'}, le ${formaterDateHeure(t.cree_le)}`],
-    t.termine_le && ['Clôturée par', `${prenomDe(t.termine_par)}, le ${formaterDateHeure(t.termine_le)}`],
+    ['Créée par', `${pseudoDe(t.cree_par) || 'quelqu’un'}, le ${formaterDateHeure(t.cree_le)}`],
+    t.termine_le && ['Clôturée par', `${pseudoDe(t.termine_par)}, le ${formaterDateHeure(t.termine_le)}`],
   ].filter(Boolean);
 
   const statuts = groupeOptions(STATUTS, t.statut, {
@@ -344,8 +344,8 @@ function ouvrirFormulaire(existante) {
 
   const cibleInitiale = t.id ? (t.assigne_aux_deux || !t.assigne_a ? 'deux' : t.assigne_a) : 'deux';
   const assignation = groupeOptions([
-    m1 && { cle: m1.id, libelle: m1.prenom },
-    m2 && { cle: m2.id, libelle: m2.prenom },
+    m1 && { cle: m1.id, libelle: m1.pseudo },
+    m2 && { cle: m2.id, libelle: m2.pseudo },
     { cle: 'deux', libelle: 'Les deux' },
   ].filter(Boolean), cibleInitiale);
 

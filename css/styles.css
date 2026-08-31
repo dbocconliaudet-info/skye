@@ -95,6 +95,22 @@ input,select,textarea{font-family:inherit;font-size:16px;color:inherit;} /* 16px
 
 .choix-membres{display:flex;flex-direction:column;gap:10px;margin:16px 0 10px;}
 .choix-membres .btn{font-size:17px;}
+.choix-membres .btn.on{background:var(--poppy);color:#fff;}
+
+/* Intertitre séparant « ton compte » de « votre espace » dans les formulaires
+   d'inscription, qui sont les plus longs de l'app. */
+.bloc-titre{
+  font-family:'Quicksand',sans-serif;font-weight:700;font-size:15px;
+  color:var(--poppy-dark);text-align:left;
+  margin:22px 4px 10px;padding-top:14px;border-top:1px solid rgba(0,0,0,.07);
+}
+.bloc-accueil > .bloc-titre:first-child{margin-top:6px;padding-top:0;border-top:none;}
+.champ em{font-style:normal;font-weight:600;color:var(--gris);opacity:.75;}
+
+.btn-lien{
+  background:transparent;color:var(--gris);box-shadow:none;
+  font-size:14px;font-weight:700;text-decoration:underline;padding:8px;
+}
 
 /* ══════════════════ Structure de l'app ══════════════════ */
 
