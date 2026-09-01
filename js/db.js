@@ -213,6 +213,21 @@ export const majDepense = async (id, patch) =>
 export const supprimerDepense = async (id) =>
   ok(await sb.from('depenses').delete().eq('id', id));
 
+// ── Anniversaires ──────────────────────────────────────────────────────────
+
+export const chargerAnniversaires = async (espaceId) =>
+  ok(await sb.from('anniversaires').select('*').eq('espace_id', espaceId)
+    .order('mois').order('jour'));
+
+export const creerAnniversaire = async (anniversaire) =>
+  ok(await sb.from('anniversaires').insert(anniversaire).select().single());
+
+export const majAnniversaire = async (id, patch) =>
+  ok(await sb.from('anniversaires').update(patch).eq('id', id).select().single());
+
+export const supprimerAnniversaire = async (id) =>
+  ok(await sb.from('anniversaires').delete().eq('id', id));
+
 // ── Mots au/à la partenaire ────────────────────────────────────────────────
 
 /** Les mots non lus qui me sont adressés. La base filtre déjà sur le
@@ -247,7 +262,7 @@ export const marquerMessageLu = async (id) =>
 export function abonner(espaceId, auChangement) {
   const canal = sb.channel(`espace-${espaceId}`);
   for (const table of ['taches', 'listes_courses', 'articles_courses', 'membres',
-    'dictionnaire_rayons', 'depenses']) {
+    'dictionnaire_rayons', 'depenses', 'anniversaires']) {
     canal.on(
       'postgres_changes',
       { event: '*', schema: 'public', table, filter: `espace_id=eq.${espaceId}` },

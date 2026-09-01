@@ -222,6 +222,13 @@
     <button class="fab" data-action="nouvelle-depense" aria-label="Nouvelle dépense">+</button>
   </main>
 
+  <!-- ─────────── Module « Anniversaires » ─────────── -->
+  <main id="vue-anniversaires" class="vue masque">
+    <div id="onglets-anniversaires" class="filtres"></div>
+    <div id="contenu-anniversaires" class="contenu-anniversaires"></div>
+    <button class="fab" data-action="nouvel-anniversaire" aria-label="Nouvel anniversaire">+</button>
+  </main>
+
   <!-- ─────────── Barre d'onglets ─────────── -->
   <nav class="tabbar">
     <button class="on" data-module="taches">
@@ -235,6 +242,10 @@
     <button data-module="tricount">
       <span class="tab-ico">💶</span>
       <span>Tricount</span>
+    </button>
+    <button data-module="anniversaires">
+      <span class="tab-ico">🎂</span>
+      <span>Anniversaires</span>
     </button>
   </nav>
 </div>
