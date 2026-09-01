@@ -20,13 +20,15 @@ export const etat = {
   listes: [],
   articles: [],
   depenses: [],
+  anniversaires: [],
   dico: new Map(),          // mot normalisé -> rayon appris par le couple
 
   // Navigation
-  module: 'taches',          // 'taches' | 'courses' | 'tricount'
+  module: 'taches',          // 'taches' | 'courses' | 'tricount' | 'anniversaires'
   ongletTaches: 'actives',   // 'actives' | 'historique'
   filtreHisto: 'tout',       // 'tout' | 'fait' | 'sans_objet'
   groupement: 'personne',    // 'personne' | 'categorie' | 'priorite'
+  vueAnniversaires: 'a_venir', // 'a_venir' | 1..12
   listeActiveId: null,
 };
 
@@ -34,8 +36,8 @@ export const etat = {
 export function oublierSession() {
   Object.assign(etat, {
     espaceId: null, espaceNom: '', lienInvitation: '', dateMariage: '', membreId: null,
-    membres: [], taches: [], listes: [], articles: [], depenses: [], dico: new Map(),
-    listeActiveId: null,
+    membres: [], taches: [], listes: [], articles: [], depenses: [], anniversaires: [],
+    dico: new Map(), listeActiveId: null,
   });
 }
 

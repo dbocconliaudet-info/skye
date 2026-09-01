@@ -11,7 +11,7 @@
  * URL : elles, on les sert depuis le cache en priorité.
  */
 
-const VERSION = 'todomtadam-v5';
+const VERSION = 'todomtadam-v6';
 const COQUILLE = [
   './',
   './index.html',
@@ -26,6 +26,7 @@ const COQUILLE = [
   './js/taches.js',
   './js/courses.js',
   './js/tricount.js',
+  './js/anniversaires.js',
   './icons/coquelicots.png',
   './icons/icon-192.png',
   './icons/apple-touch-icon.png',

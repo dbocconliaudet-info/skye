@@ -9,6 +9,9 @@ import * as db from './db.js';
 import { rendreTaches, ouvrirNouvelleTache, genererOccurrencesDues } from './taches.js';
 import { rendreCourses, ajouterDepuisTexte } from './courses.js';
 import { rendreTricount, ouvrirNouvelleDepense } from './tricount.js';
+import {
+  rendreAnniversaires, ouvrirNouvelAnniversaire, construireOngletsMois,
+} from './anniversaires.js';
 
 // ══════════════════ Onboarding ══════════════════
 
@@ -264,15 +267,17 @@ async function entrerDansApp() {
 }
 
 async function rechargerDonnees() {
-  const [espace, membres, taches, listes, articles, depenses, dico] = await Promise.all([
-    db.espaceParId(etat.espaceId),
-    db.chargerMembres(etat.espaceId),
-    db.chargerTaches(etat.espaceId),
-    db.chargerListes(etat.espaceId),
-    db.chargerArticles(etat.espaceId),
-    db.chargerDepenses(etat.espaceId),
-    db.chargerDico(etat.espaceId),
-  ]);
+  const [espace, membres, taches, listes, articles, depenses, anniversaires, dico] =
+    await Promise.all([
+      db.espaceParId(etat.espaceId),
+      db.chargerMembres(etat.espaceId),
+      db.chargerTaches(etat.espaceId),
+      db.chargerListes(etat.espaceId),
+      db.chargerArticles(etat.espaceId),
+      db.chargerDepenses(etat.espaceId),
+      db.chargerAnniversaires(etat.espaceId),
+      db.chargerDico(etat.espaceId),
+    ]);
   // Relire l'espace à chaque fois évite de traîner un nom ou une date modifiés
   // depuis l'autre téléphone : ces trois champs ne passent pas par le temps réel.
   if (espace) {
@@ -285,6 +290,7 @@ async function rechargerDonnees() {
   etat.listes = listes;
   etat.articles = articles;
   etat.depenses = depenses;
+  etat.anniversaires = anniversaires;
   etat.dico = new Map(dico.map((d) => [d.mot, d.rayon]));
   rendreTout();
 }
@@ -293,6 +299,7 @@ function rendreTout() {
   rendreTaches();
   rendreCourses();
   rendreTricount();
+  rendreAnniversaires();
 }
 
 /**
@@ -316,6 +323,7 @@ const TITRES_MODULES = {
   taches: 'On s’en occupe',
   courses: 'Courses',
   tricount: 'Tricount',
+  anniversaires: 'Anniversaires',
 };
 
 function basculerModule(nom) {
@@ -323,6 +331,7 @@ function basculerModule(nom) {
   montrer($('#vue-taches'), nom === 'taches');
   montrer($('#vue-courses'), nom === 'courses');
   montrer($('#vue-tricount'), nom === 'tricount');
+  montrer($('#vue-anniversaires'), nom === 'anniversaires');
   $('#titre-module').textContent = TITRES_MODULES[nom] || '';
   for (const b of $$('.tabbar button')) b.classList.toggle('on', b.dataset.module === nom);
 }
@@ -395,6 +404,10 @@ function brancherEvenements() {
 
   // — Tricount
   $('[data-action="nouvelle-depense"]').addEventListener('click', ouvrirNouvelleDepense);
+
+  // — Anniversaires
+  construireOngletsMois();
+  $('[data-action="nouvel-anniversaire"]').addEventListener('click', ouvrirNouvelAnniversaire);
 
   // — Courses : barre d'ajout
   $('#barre-ajout').addEventListener('submit', (e) => {

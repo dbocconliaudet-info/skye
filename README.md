@@ -60,11 +60,12 @@ tableau de bord Supabase → **Table Editor** → `espaces` → colonne
 3. Coller **tout** le contenu de [`supabase/schema.sql`](supabase/schema.sql) → **Run**
 4. Recommencer avec [`supabase/schema-v2.sql`](supabase/schema-v2.sql), et faire
    les réglages d'authentification décrits juste au-dessus
-5. Recommencer avec [`supabase/schema-v3.sql`](supabase/schema-v3.sql)
+5. Recommencer avec [`supabase/schema-v3.sql`](supabase/schema-v3.sql), puis
+   [`supabase/schema-v4.sql`](supabase/schema-v4.sql)
 
 Les scripts sont rejouables sans risque : les relancer ne détruit aucune donnée.
 Ils s'exécutent dans l'ordre — `v2` s'appuie sur les tables de `schema.sql`,
-`v3` sur les règles de sécurité de `v2`.
+`v3` et `v4` sur les règles de sécurité de `v2`.
 
 ### 2. Publier le site sur GitHub Pages
 
@@ -131,11 +132,13 @@ JavaScript exigent un vrai serveur (`http://`, pas `file://`).
 | `js/taches.js` | Module « On s'en occupe » |
 | `js/courses.js` | Module « Courses » |
 | `js/tricount.js` | Module « Tricount » : dépenses et solde |
+| `js/anniversaires.js` | Module « Anniversaires » |
 | `js/app.js` | Démarrage, onboarding, navigation |
 | `sw.js` + `manifest.json` | Ce qui rend l'app installable |
 | `supabase/schema.sql` | Le schéma de base de données |
 | `supabase/schema-v2.sql` | Comptes, Row Level Security, dates, messages |
 | `supabase/schema-v3.sql` | Les dépenses du module « Tricount » |
+| `supabase/schema-v4.sql` | Les anniversaires |
 | `icons/` | Icônes générées depuis l'illustration des coquelicots |
 
 ---
@@ -172,6 +175,13 @@ JavaScript exigent un vrai serveur (`http://`, pas `file://`).
 - Bouton « On solde les comptes » qui enregistre le remboursement sans effacer
   l'historique
 - Reprise en une ligne du solde que vous avez aujourd'hui dans Tricount
+
+**Module « Anniversaires »**
+- Vue « À venir » sur 60 jours, puis une vue par mois
+- Année de naissance facultative : sans elle, l'âge n'est simplement pas affiché
+- Vos deux anniversaires y figurent d'office, repris de la section « Nos dates »
+- Note libre par personne (idées de cadeau) et marqueur « prévoir un cadeau »,
+  qui servira à trier les futures notifications
 
 **Un mot à son/sa partenaire**
 - S'écrit depuis les Réglages ⚙, s'affiche à la prochaine ouverture de l'app

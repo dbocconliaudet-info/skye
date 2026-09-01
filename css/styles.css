@@ -352,6 +352,48 @@ input,select,textarea{font-family:inherit;font-size:16px;color:inherit;} /* 16px
 .tricount-vide > p:first-child{font-size:15px;font-weight:700;color:var(--gris);}
 .tricount-reprise{margin-top:18px;}
 
+/* ══════════════════ Module « Anniversaires » ══════════════════ */
+
+.contenu-anniversaires{flex:1;overflow-y:auto;padding:8px 16px 12px;-webkit-overflow-scrolling:touch;}
+
+.anniv{
+  display:flex;align-items:center;gap:13px;width:100%;text-align:left;
+  background:var(--card);border:none;border-radius:16px;
+  padding:11px 13px;margin-bottom:7px;box-shadow:var(--ombre);
+}
+/* La date en pastille à gauche : c'est ce qu'on cherche en balayant la liste,
+   avant même le prénom. */
+.anniv-date{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  min-width:46px;flex-shrink:0;background:var(--fond-doux, rgba(230,57,70,.08));
+  border-radius:12px;padding:6px 4px;
+}
+.anniv-jour{
+  font-family:'Quicksand',sans-serif;font-size:19px;font-weight:700;
+  line-height:1;color:var(--poppy-dark);
+}
+.anniv-mois{font-size:10px;font-weight:700;color:var(--gris);margin-top:2px;}
+.anniv-corps{flex:1;min-width:0;}
+.anniv-nom{
+  font-size:15px;font-weight:700;color:var(--ink);margin:0;
+  display:flex;align-items:center;gap:6px;
+}
+.anniv-cadeau{font-size:13px;}
+.anniv-meta{font-size:11.5px;color:var(--gris);margin:3px 0 0;}
+.anniv-note{
+  font-size:12px;color:var(--gris);margin:4px 0 0;line-height:1.4;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.anniv-aujourdhui{box-shadow:0 0 0 2px var(--poppy), var(--ombre);}
+.anniv-aujourdhui .anniv-date{background:var(--poppy);}
+.anniv-aujourdhui .anniv-jour{color:#fff;}
+.anniv-aujourdhui .anniv-mois{color:rgba(255,255,255,.85);}
+/* Les deux membres du foyer : leur date se modifie dans les Réglages, pas ici. */
+.anniv-membre{background:transparent;box-shadow:none;border:1px dashed var(--gris-clair);}
+
+.anniv-vide{text-align:center;padding:34px 10px;}
+.anniv-vide > p:first-child{font-size:15px;font-weight:700;color:var(--gris);}
+
 /* ══════════════════ Feuille modale ══════════════════ */
 
 .voile{
@@ -437,6 +479,7 @@ input,select,textarea{font-family:inherit;font-size:16px;color:inherit;} /* 16px
   .segmented,.filtres,.addbar{max-width:900px;width:100%;margin-left:auto;margin-right:auto;}
   .contenu-courses{max-width:900px;margin:0 auto;width:100%;}
   .contenu-tricount{max-width:640px;margin:0 auto;width:100%;}
+  .contenu-anniversaires{max-width:640px;margin:0 auto;width:100%;}
   .colonnes{justify-content:flex-start;max-width:900px;margin:0 auto;width:100%;}
   .voile{align-items:center;}
   .feuille{border-radius:26px;max-height:86dvh;}
