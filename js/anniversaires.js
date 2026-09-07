@@ -255,8 +255,8 @@ function ouvrirFiche(existant) {
     el('button', { class: 'btn btn-primaire', onclick: enregistrer },
       estNouveau ? 'Ajouter' : 'Enregistrer'),
     estNouveau
-      ? el('button', { class: 'btn btn-discret', onclick: fermerFeuille }, 'Annuler')
-      : el('button', { class: 'btn btn-danger', onclick: () => supprimer(a) }, 'Supprimer'),
+      ? el('button', { class: 'btn btn-fantome', onclick: fermerFeuille }, 'Annuler')
+      : el('button', { class: 'btn btn-destructif', onclick: () => supprimer(a) }, 'Supprimer'),
   ));
 }
 

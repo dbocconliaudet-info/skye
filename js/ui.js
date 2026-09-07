@@ -83,11 +83,14 @@ export function confirmer(titre, { detail, texteOk = 'Confirmer', danger = false
       el('div', {},
         el('h2', {}, titre),
         detail ? el('p', { class: 'feuille-info' }, detail) : null,
+        // Le rouge de marque est la couleur d'action, jamais celle du danger :
+        // une confirmation destructive porte `--danger`, plus une icône et un
+        // libellé explicite — la couleur ne doit jamais suffire à alerter.
         el('button', {
-          class: danger ? 'btn btn-primaire' : 'btn btn-secondaire',
+          class: danger ? 'btn btn-destructif' : 'btn btn-primaire',
           onclick: () => repondre(true),
         }, texteOk),
-        el('button', { class: 'btn btn-discret', onclick: () => repondre(false) }, 'Annuler'),
+        el('button', { class: 'btn btn-fantome', onclick: () => repondre(false) }, 'Annuler'),
       ),
       { auFermer: () => repondre(false) },
     );

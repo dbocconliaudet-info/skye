@@ -167,7 +167,7 @@ function ouvrirChoixRayon(a) {
     choix,
     el('div', { class: 'separateur' }),
     el('button', {
-      class: 'btn btn-danger',
+      class: 'btn btn-destructif',
       onclick: async () => {
         fermerFeuille();
         etat.articles = etat.articles.filter((x) => x.id !== a.id);
@@ -251,7 +251,7 @@ function ouvrirNouvelleListe() {
       'Pour un événement précis. Une fois les courses faites, vous la clôturerez — elle restera consultable et duplicable.'),
     el('label', { class: 'champ' }, el('span', {}, 'Nom de la liste'), nom),
     el('button', { class: 'btn btn-primaire', onclick: creer }, 'Créer la liste'),
-    el('button', { class: 'btn btn-discret', onclick: fermerFeuille }, 'Annuler'),
+    el('button', { class: 'btn btn-fantome', onclick: fermerFeuille }, 'Annuler'),
   ));
   setTimeout(() => nom.focus(), 120);
 }
@@ -315,6 +315,6 @@ function ouvrirDuplication(source) {
       'Une nouvelle liste active sera créée avec les mêmes articles, tous décochés.'),
     el('label', { class: 'champ' }, el('span', {}, 'Nom de la nouvelle liste'), nom),
     el('button', { class: 'btn btn-primaire', onclick: dupliquer }, 'Dupliquer'),
-    el('button', { class: 'btn btn-discret', onclick: fermerFeuille }, 'Annuler'),
+    el('button', { class: 'btn btn-fantome', onclick: fermerFeuille }, 'Annuler'),
   ));
 }

@@ -269,11 +269,11 @@ function ouvrirDetail(id) {
 
     el('div', { class: 'separateur' }),
     el('button', {
-      class: 'btn btn-doux',
+      class: 'btn btn-secondaire',
       onclick: () => { fermerFeuille(); ouvrirFormulaire(t); },
     }, 'Modifier la tâche'),
     el('button', {
-      class: 'btn btn-danger',
+      class: 'btn btn-destructif',
       onclick: async () => {
         fermerFeuille();
         const oui = await confirmer('Supprimer cette tâche ?', {
@@ -347,7 +347,7 @@ function demanderNoteDeCloture(t) {
     el('label', { class: 'champ' },
       el('span', {}, 'Un mot à laisser ? (facultatif)'), zone),
     el('button', { class: 'btn btn-secondaire', onclick: valider }, 'Valider'),
-    el('button', { class: 'btn btn-discret', onclick: fermerFeuille }, 'Annuler'),
+    el('button', { class: 'btn btn-fantome', onclick: fermerFeuille }, 'Annuler'),
   ));
   setTimeout(() => zone.focus(), 120);
 }
@@ -480,7 +480,7 @@ function ouvrirFormulaire(existante) {
     blocRecurrence,
 
     el('button', { class: 'btn btn-primaire', onclick: enregistrer }, t.id ? 'Enregistrer' : 'Ajouter la tâche'),
-    el('button', { class: 'btn btn-discret', onclick: fermerFeuille }, 'Annuler'),
+    el('button', { class: 'btn btn-fantome', onclick: fermerFeuille }, 'Annuler'),
   ));
 
   if (!t.id) setTimeout(() => titre.focus(), 120);

@@ -129,7 +129,7 @@ async function preparerRejoindre(jeton, retour = '#accueil-choix') {
   for (const m of aReprendre) {
     hote.append(el('button', {
       type: 'button',
-      class: 'btn btn-doux',
+      class: 'btn btn-secondaire',
       onclick: (e) => {
         rejoindre.membreId = m.id;
         champPseudo.value = m.pseudo;
@@ -140,7 +140,7 @@ async function preparerRejoindre(jeton, retour = '#accueil-choix') {
   if (aReprendre.length) {
     hote.append(el('button', {
       type: 'button',
-      class: 'btn btn-doux',
+      class: 'btn btn-secondaire',
       onclick: (e) => {
         rejoindre.membreId = null;
         champPseudo.value = '';
@@ -444,9 +444,9 @@ function lienInvitation() {
 
 async function partagerLien() {
   const lien = lienInvitation();
-  const texte = `Rejoins notre espace ToDomTaDam « ${etat.espaceNom} » : ${lien}`;
+  const texte = `Rejoins notre espace Skye « ${etat.espaceNom} » : ${lien}`;
   try {
-    if (navigator.share) { await navigator.share({ title: 'ToDomTaDam', text: texte, url: lien }); return; }
+    if (navigator.share) { await navigator.share({ title: 'Skye', text: texte, url: lien }); return; }
     await navigator.clipboard.writeText(lien);
     toast('Lien copié');
   } catch {
@@ -457,7 +457,7 @@ async function partagerLien() {
       el('label', { class: 'champ' },
         el('span', {}, 'À copier et envoyer par SMS'),
         el('input', { type: 'text', value: lien, readonly: true, onclick: (e) => e.target.select() })),
-      el('button', { class: 'btn btn-discret', onclick: fermerFeuille }, 'Fermer'),
+      el('button', { class: 'btn btn-fantome', onclick: fermerFeuille }, 'Fermer'),
     ));
   }
 }
@@ -527,7 +527,7 @@ function ouvrirEcritureMot() {
       + `Ni toi ni ${autre.pseudo} ne pourrez le relire ensuite — c’est fait pour.`),
     el('label', { class: 'champ' }, el('span', {}, 'Ton message'), champ),
     el('button', { class: 'btn btn-primaire', onclick: envoyer }, 'Envoyer'),
-    el('button', { class: 'btn btn-discret', onclick: fermerFeuille }, 'Annuler'),
+    el('button', { class: 'btn btn-fantome', onclick: fermerFeuille }, 'Annuler'),
   ));
 }
 
@@ -571,7 +571,7 @@ function sectionDates() {
       : null,
     el('label', { class: 'champ' },
       el('span', {}, 'Votre date de mariage ou de PACS'), champMariage),
-    el('button', { class: 'btn btn-doux', onclick: enregistrer }, 'Enregistrer les dates'),
+    el('button', { class: 'btn btn-secondaire', onclick: enregistrer }, 'Enregistrer les dates'),
   );
 }
 
@@ -594,7 +594,7 @@ function ouvrirReglages() {
 
     el('button', { class: 'btn btn-primaire', onclick: partagerLien }, 'Envoyer le lien d’invitation'),
     partenaire()
-      ? el('button', { class: 'btn btn-doux', onclick: ouvrirEcritureMot },
+      ? el('button', { class: 'btn btn-secondaire', onclick: ouvrirEcritureMot },
         `Écrire un mot à ${partenaire().pseudo}`)
       : null,
 
@@ -615,8 +615,8 @@ function ouvrirReglages() {
 
     el('div', { class: 'separateur' }),
     el('p', { class: 'feuille-info' },
-      'Astuce : sur iPhone, « Partager » puis « Sur l’écran d’accueil » installe ToDomTaDam comme une vraie application.'),
-    el('button', { class: 'btn btn-danger', onclick: quitter }, 'Se déconnecter'),
+      'Astuce : sur iPhone, « Partager » puis « Sur l’écran d’accueil » installe Skye comme une vraie application.'),
+    el('button', { class: 'btn btn-destructif', onclick: quitter }, 'Se déconnecter'),
   ));
 }
 

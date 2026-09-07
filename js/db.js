@@ -14,6 +14,9 @@ export const sb = createClient(SUPABASE_URL, SUPABASE_CLE_PUBLIQUE, {
     // Nécessaire pour le lien « mot de passe oublié », qui revient dans l'app
     // avec un jeton de récupération dans l'adresse.
     detectSessionInUrl: true,
+    // Volontairement inchangé malgré le renommage en Skye : cette clé désigne
+    // la session stockée sur l'appareil. La renommer déconnecterait tout le
+    // monde sans rien apporter — elle n'est jamais affichée.
     storageKey: 'todomtadam.auth',
   },
   realtime: { params: { eventsPerSecond: 5 } },

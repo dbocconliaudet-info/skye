@@ -3,19 +3,24 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1">
-<title>ToDomTaDam</title>
+<title>Skye</title>
 
-<meta name="theme-color" content="#FBE9E4">
+<!-- La barre système suit le thème de l'appareil, comme le reste de l'interface. -->
+<meta name="theme-color" content="#FAF7F2" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#141210" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="ToDomTaDam">
+<meta name="apple-mobile-web-app-title" content="Skye">
 <link rel="manifest" href="manifest.json">
-<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="apple-touch-icon" href="brand/png/skye-icon-180.png">
+<link rel="icon" type="image/png" sizes="32x32" href="brand/png/skye-favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="brand/png/skye-favicon-16.png">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<!-- Fraunces pour le seul logotype « Skye », Plus Jakarta Sans pour tout le reste. -->
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/tokens.css">
 <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
@@ -23,15 +28,24 @@
 <!-- ══════════════════ Écran de démarrage / onboarding ══════════════════ -->
 <section id="ecran-accueil" class="ecran ecran-plein">
   <div class="bienvenue">
-    <img class="bienvenue-logo" src="icons/coquelicots.png" alt="">
-    <h1 class="marque">ToDomTaDam</h1>
-    <p class="baseline">L'organisation du quotidien, à deux.</p>
+    <!-- L'animation de lancement du kit de marque, posée telle quelle : elle
+         embarque son propre CSS et respecte prefers-reduced-motion.
+         En <object> et non en <img> : Chrome n'exécute pas les animations CSS
+         d'un SVG chargé en image, et la marque resterait invisible — son fond
+         démarre à opacity:0 et n'est révélé que par l'animation. Le PNG à
+         l'intérieur sert de repli si l'objet ne se charge pas. -->
+    <object class="bienvenue-logo" type="image/svg+xml"
+            data="brand/skye-mark-animated.svg" aria-hidden="true">
+      <img src="brand/png/skye-icon-192.png" alt="">
+    </object>
+    <h1 class="marque logotype">Skye</h1>
+    <p class="baseline">Votre espace à deux.</p>
 
     <!-- Choix initial -->
     <div id="accueil-choix" class="bloc-accueil">
       <button class="btn btn-primaire" data-action="ouvrir-connexion">Se connecter</button>
-      <button class="btn btn-doux" data-action="ouvrir-creation">Créer notre espace</button>
-      <button class="btn btn-doux" data-action="ouvrir-code">Rejoindre un espace</button>
+      <button class="btn btn-secondaire" data-action="ouvrir-creation">Créer notre espace</button>
+      <button class="btn btn-secondaire" data-action="ouvrir-code">Rejoindre un espace</button>
       <p class="aide">Ton/ta partenaire t'a envoyé un lien&nbsp;? Ouvre-le directement&nbsp;: il t'amènera au bon endroit.</p>
     </div>
 
@@ -48,7 +62,7 @@
       </label>
       <button type="submit" class="btn btn-primaire">Se connecter</button>
       <button type="button" class="btn btn-lien" data-action="ouvrir-oubli">Mot de passe oublié&nbsp;?</button>
-      <button type="button" class="btn btn-discret" data-action="retour-accueil">Retour</button>
+      <button type="button" class="btn btn-fantome" data-action="retour-accueil">Retour</button>
     </form>
 
     <!-- Mot de passe oublié -->
@@ -60,7 +74,7 @@
                autocapitalize="none" autocorrect="off" spellcheck="false" required>
       </label>
       <button type="submit" class="btn btn-primaire">Envoyer le lien</button>
-      <button type="button" class="btn btn-discret" data-action="ouvrir-connexion">Retour</button>
+      <button type="button" class="btn btn-fantome" data-action="ouvrir-connexion">Retour</button>
     </form>
 
     <!-- Nouveau mot de passe, après clic sur le lien reçu par email -->
@@ -82,7 +96,7 @@
       </label>
       <p class="aide">Le code se trouve dans l'app, sur l'autre téléphone&nbsp;: icône ⚙ en haut à droite. Tu peux aussi coller le lien d'invitation entier.</p>
       <button type="submit" class="btn btn-primaire">Continuer</button>
-      <button type="button" class="btn btn-discret" data-action="retour-accueil">Retour</button>
+      <button type="button" class="btn btn-fantome" data-action="retour-accueil">Retour</button>
     </form>
 
     <!-- Création du compte + de l'espace, en une fois -->
@@ -120,7 +134,7 @@
       </label>
 
       <button type="submit" class="btn btn-primaire">Créer l'espace</button>
-      <button type="button" class="btn btn-discret" data-action="retour-accueil">Retour</button>
+      <button type="button" class="btn btn-fantome" data-action="retour-accueil">Retour</button>
     </form>
 
     <!-- Rejoindre : identité puis création du compte -->
@@ -156,15 +170,15 @@
       </label>
 
       <button type="submit" class="btn btn-primaire">Rejoindre l'espace</button>
-      <button type="button" class="btn btn-discret" data-action="retour-accueil">Retour</button>
+      <button type="button" class="btn btn-fantome" data-action="retour-accueil">Retour</button>
     </form>
 
     <!-- Compte créé, mais pas encore rattaché à un espace -->
     <div id="accueil-sans-espace" class="bloc-accueil masque">
       <p class="aide">Te voilà connecté·e, mais ton compte n'est rattaché à aucun espace.</p>
       <button class="btn btn-primaire" data-action="ouvrir-creation">Créer notre espace</button>
-      <button class="btn btn-doux" data-action="ouvrir-code">Rejoindre un espace</button>
-      <button type="button" class="btn btn-discret" data-action="deconnexion">Se déconnecter</button>
+      <button class="btn btn-secondaire" data-action="ouvrir-code">Rejoindre un espace</button>
+      <button type="button" class="btn btn-fantome" data-action="deconnexion">Se déconnecter</button>
     </div>
   </div>
 </section>
@@ -174,8 +188,10 @@
 
   <header class="topbar">
     <div class="brand">
-      <img src="icons/coquelicots.png" alt="">
-      <span>ToDomTaDam</span>
+      <!-- Sous 48 px, la charte impose la variante favicon : son délié est
+           épaissi pour survivre à la réduction. -->
+      <img src="brand/skye-icone-favicon.svg" alt="">
+      <span class="logotype">Skye</span>
       <button class="btn-reglages" data-action="ouvrir-reglages" aria-label="Réglages">⚙</button>
     </div>
     <div class="titre" id="titre-module">On s'en occupe</div>
