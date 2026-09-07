@@ -1,4 +1,4 @@
-# ToDomTaDam
+# Skye
 
 Web app privée pour organiser à deux les tâches du quotidien et les courses.
 Installable sur l'écran d'accueil d'un téléphone, synchronisée en temps réel
@@ -89,7 +89,7 @@ Une minute plus tard, l'app est en ligne sur :
 - **iPhone** : ouvrir le site dans **Safari** (pas Chrome) → bouton Partager → *Sur l'écran d'accueil*
 - **Android** : Chrome → menu ⋮ → *Installer l'application*
 
-L'app s'ouvre alors en plein écran, avec les coquelicots en icône.
+L'app s'ouvre alors en plein écran, avec la marque Skye en icône.
 
 ---
 
@@ -123,7 +123,8 @@ JavaScript exigent un vrai serveur (`http://`, pas `file://`).
 | Fichier | Rôle |
 |---|---|
 | `index.html` | Structure de tous les écrans |
-| `css/styles.css` | Charte graphique (palette coquelicot & liberty, typos) |
+| `css/tokens.css` | Les variables de la charte Skye — à ne pas modifier à la main |
+| `css/styles.css` | L'interface, construite uniquement sur ces variables |
 | `js/config.js` | Coordonnées Supabase, listes de catégories et priorités |
 | `js/db.js` | Comptes, accès à la base et abonnement temps réel |
 | `js/etat.js` | État de l'app en mémoire |
@@ -139,7 +140,8 @@ JavaScript exigent un vrai serveur (`http://`, pas `file://`).
 | `supabase/schema-v2.sql` | Comptes, Row Level Security, dates, messages |
 | `supabase/schema-v3.sql` | Les dépenses du module « Tricount » |
 | `supabase/schema-v4.sql` | Les anniversaires |
-| `icons/` | Icônes générées depuis l'illustration des coquelicots |
+| `brand/` | Le kit de marque : logotype, icônes, animation de lancement |
+| `logo/` | La charte complète et le kit d'origine, pour référence |
 
 ---
 
@@ -223,3 +225,21 @@ Ce niveau convient à des tâches et des listes de courses, et sert de base
 correcte pour la suite. Le module Documents (§8 du cahier des charges) demandera
 tout de même son propre passage : chiffrement et contrôle d'accès s'y jugent au
 cas par cas, pas par héritage.
+
+---
+
+## Charte graphique
+
+L'identité visuelle est définie par le kit de marque Skye, dans `logo/`. Deux
+règles suffisent à ne pas la casser :
+
+1. **Aucune valeur en dur.** Toutes les couleurs, tailles, rayons et durées
+   viennent de `css/tokens.css`. Ce fichier vient du kit : on ne le modifie pas
+   ici. Le thème sombre en découle entièrement, sans un seul sélecteur dédié.
+2. **Le rouge est la couleur d'action, jamais celle de l'erreur.** Un bouton
+   destructif porte `--danger` et une icône, jamais la couleur seule. Un seul
+   bouton rouge par écran.
+
+Le logo ne se redessine pas et ne change pas de couleur. En dessous de 48 px,
+c'est `brand/skye-icone-favicon.svg` qu'il faut utiliser : son délié est épaissi
+pour survivre à la réduction.

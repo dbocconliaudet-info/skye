@@ -1,4 +1,4 @@
-/* ToDomTaDam — service worker
+/* Skye — service worker
  *
  * Stratégie : réseau d'abord pour les fichiers de l'app, cache en secours.
  * C'est volontaire : après un `git push`, la nouvelle version doit apparaître
@@ -11,11 +11,12 @@
  * URL : elles, on les sert depuis le cache en priorité.
  */
 
-const VERSION = 'todomtadam-v6';
+const VERSION = 'skye-v1';
 const COQUILLE = [
   './',
   './index.html',
   './manifest.json',
+  './css/tokens.css',
   './css/styles.css',
   './js/app.js',
   './js/config.js',
@@ -27,9 +28,10 @@ const COQUILLE = [
   './js/courses.js',
   './js/tricount.js',
   './js/anniversaires.js',
-  './icons/coquelicots.png',
-  './icons/icon-192.png',
-  './icons/apple-touch-icon.png',
+  './brand/skye-icone-favicon.svg',
+  './brand/skye-mark-animated.svg',
+  './brand/png/skye-icon-192.png',
+  './brand/png/skye-icon-180.png',
 ];
 
 self.addEventListener('install', (e) => {

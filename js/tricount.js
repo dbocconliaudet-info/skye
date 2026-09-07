@@ -116,7 +116,7 @@ function carteSolde() {
     el('p', { class: 'solde-phrase' }, jeSuisCreancier ? `${qui} te doit` : `Tu dois à ${qui}`),
     el('p', { class: 'solde-montant' }, formaterMontant(Math.abs(monSolde))),
     autre
-      ? el('button', { class: 'btn btn-doux', onclick: ouvrirSolder }, 'On solde les comptes')
+      ? el('button', { class: 'btn btn-secondaire', onclick: ouvrirSolder }, 'On solde les comptes')
       : null,
   );
 }
@@ -149,7 +149,7 @@ function ligneDepense(d) {
 function boutonSoldeInitial() {
   if (etat.depenses.some((d) => d.type === 'solde_initial')) return null;
   return el('button', {
-    class: 'btn btn-discret',
+    class: 'btn btn-fantome',
     onclick: ouvrirSoldeInitial,
   }, 'Reprendre un solde Tricount');
 }
@@ -246,8 +246,8 @@ function ouvrirDepense(existante) {
     el('button', { class: 'btn btn-primaire', onclick: enregistrer },
       estNouvelle ? 'Ajouter' : 'Enregistrer'),
     estNouvelle
-      ? el('button', { class: 'btn btn-discret', onclick: fermerFeuille }, 'Annuler')
-      : el('button', { class: 'btn btn-danger', onclick: () => supprimer(d) }, 'Supprimer'),
+      ? el('button', { class: 'btn btn-fantome', onclick: fermerFeuille }, 'Annuler')
+      : el('button', { class: 'btn btn-destructif', onclick: () => supprimer(d) }, 'Supprimer'),
   ));
 }
 
@@ -279,7 +279,7 @@ function ouvrirLigneSimple(d) {
       `${pseudoDe(d.paye_par)} → ${pseudoDe(d.pour_membre)}, le ${formaterDate(d.date_depense)}.`),
     el('label', { class: 'champ' }, el('span', {}, 'Montant'), montant),
     el('button', { class: 'btn btn-primaire', onclick: enregistrer }, 'Enregistrer'),
-    el('button', { class: 'btn btn-danger', onclick: () => supprimer(d) }, 'Supprimer'),
+    el('button', { class: 'btn btn-destructif', onclick: () => supprimer(d) }, 'Supprimer'),
   ));
 }
 
@@ -347,7 +347,7 @@ function ouvrirSolder() {
       + 'solde actuel — tu peux le modifier si vous ne réglez qu’une partie.'),
     el('label', { class: 'champ' }, el('span', {}, 'Montant remboursé'), montant),
     el('button', { class: 'btn btn-primaire', onclick: enregistrer }, 'Enregistrer le remboursement'),
-    el('button', { class: 'btn btn-discret', onclick: fermerFeuille }, 'Annuler'),
+    el('button', { class: 'btn btn-fantome', onclick: fermerFeuille }, 'Annuler'),
   ));
 }
 
@@ -408,7 +408,7 @@ function ouvrirSoldeInitial() {
     el('label', { class: 'champ' }, el('span', {}, 'Dans quel sens ?'), sens),
     el('label', { class: 'champ' }, el('span', {}, 'Montant'), montant),
     el('button', { class: 'btn btn-primaire', onclick: enregistrer }, 'Reprendre ce solde'),
-    el('button', { class: 'btn btn-discret', onclick: fermerFeuille }, 'Annuler'),
+    el('button', { class: 'btn btn-fantome', onclick: fermerFeuille }, 'Annuler'),
   ));
 }
 
