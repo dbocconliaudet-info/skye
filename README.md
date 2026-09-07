@@ -69,12 +69,16 @@ Ils s'exécutent dans l'ordre — `v2` s'appuie sur les tables de `schema.sql`,
 
 ### 2. Publier le site sur GitHub Pages
 
-1. Sur GitHub → dépôt `todomtadam` → **Settings** → **Pages**
+1. Sur GitHub → dépôt `skye` → **Settings** → **Pages**
 2. *Source* : **Deploy from a branch**
 3. *Branch* : **main**, dossier **/ (root)** → **Save**
 
 Une minute plus tard, l'app est en ligne sur :
-`https://dbocconliaudet-info.github.io/todomtadam/`
+`https://dbocconliaudet-info.github.io/skye/`
+
+⚠️ Cette adresse doit figurer dans Supabase → **Authentication** → **URL
+Configuration**, en *Site URL* et en *Redirect URL*. Sans ça, le lien « mot de
+passe oublié » renvoie ailleurs et la réinitialisation échoue.
 
 ### 3. Créer l'espace et inviter Dom
 
