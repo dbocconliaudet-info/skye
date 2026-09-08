@@ -412,9 +412,19 @@ input,select,textarea{font-family:var(--font-ui);font-size:16px;color:inherit;}
 .case{
   width:22px;height:22px;border-radius:var(--radius-pill);
   border:2px solid var(--ink-4);flex-shrink:0;background:transparent;padding:0;
+  display:flex;align-items:center;justify-content:center;
+  font-size:13px;line-height:1;color:transparent;
   transition:background var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease);
 }
 .case:active{background:var(--success-soft);border-color:var(--success);}
+/* Cochée = « on en a ». Le vert dit la disponibilité, pas l'achèvement d'une
+   tâche : la ligne reste, elle ne se barre pas. */
+.case.on{background:var(--success);border-color:var(--success);color:var(--sur-marque);}
+.case.on::after{content:"✓";}
+/* En stock : la ligne s'efface d'un cran sans devenir illisible — sous le
+   filtre « Tout », elle reste une information consultable. */
+.est-coche{background:transparent;box-shadow:none;border-style:dashed;}
+.est-coche .nom,.est-coche .qte{color:var(--ink-3);}
 .article .nom{font:var(--text-body);font-weight:500;flex:1;min-width:0;}
 .article .qte{font:var(--text-sm);color:var(--ink-3);font-weight:600;flex-shrink:0;}
 .article .sous-ligne{display:block;font:var(--text-caption);color:var(--ink-4);margin-top:2px;}

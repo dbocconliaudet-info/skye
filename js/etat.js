@@ -31,6 +31,7 @@ export const etat = {
   filtreHisto: 'tout',       // 'tout' | 'fait' | 'sans_objet'
   groupement: 'personne',    // 'personne' | 'categorie' | 'priorite'
   vueAnniversaires: 'a_venir', // 'a_venir' | 1..12
+  filtreCourses: 'a_acheter',  // 'a_acheter' | 'tout'
   listeActiveId: null,
 };
 

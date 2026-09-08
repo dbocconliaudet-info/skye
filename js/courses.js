@@ -39,6 +39,7 @@ export function rendreCourses() {
   const hote = vider($('#contenu-courses'));
   const enHistorique = etat.listeActiveId === VUE_HISTORIQUE;
   montrer($('#barre-ajout'), !enHistorique);
+  montrer($('#filtres-courses'), !enHistorique);
 
   if (enHistorique) { rendreHistorique(hote); return; }
 
@@ -55,11 +56,13 @@ export function rendreCourses() {
     ));
   }
 
-  const articles = etat.articles.filter((a) => a.liste_id === liste.id && !a.coche);
+  const deLaListe = etat.articles.filter((a) => a.liste_id === liste.id);
+  const articles = etat.filtreCourses === 'a_acheter'
+    ? deLaListe.filter((a) => !a.coche)
+    : deLaListe;
+
   if (!articles.length) {
-    hote.append(el('p', { class: 'liste-vide' },
-      el('strong', {}, 'Liste vide'),
-      'Ajoutez un article ci-dessous. La dictée du clavier fonctionne : « du lait, des œufs et du pain ».'));
+    hote.append(videAdapte(deLaListe.length));
     return;
   }
 
@@ -67,6 +70,19 @@ export function rendreCourses() {
     hote.append(el('p', { class: 'rayon-titre' }, rayon));
     for (const a of lot) hote.append(ligneArticle(a));
   }
+}
+
+/** Une liste vide et une liste dont tout est coché ne disent pas la même chose :
+ *  la première attend qu'on la remplisse, la seconde annonce une bonne nouvelle. */
+function videAdapte(nbTotal) {
+  if (nbTotal && etat.filtreCourses === 'a_acheter') {
+    return el('p', { class: 'liste-vide' },
+      el('strong', {}, 'Rien à racheter'),
+      'Tout est coché. Décochez ce qui vient à manquer, ou passez sur « Tout » pour voir l’inventaire complet.');
+  }
+  return el('p', { class: 'liste-vide' },
+    el('strong', {}, 'Liste vide'),
+    'Ajoutez un article ci-dessous. La dictée du clavier fonctionne : « du lait, des œufs et du pain ».');
 }
 
 function rendreOnglets() {
@@ -90,16 +106,18 @@ function rendreOnglets() {
 }
 
 function ligneArticle(a) {
-  return el('div', { class: 'article' },
+  return el('div', { class: `article ${a.coche ? 'est-coche' : ''}` },
     el('button', {
-      class: 'case', 'aria-label': `Cocher ${a.nom}`,
-      onclick: () => cocher(a),
+      class: `case ${a.coche ? 'on' : ''}`,
+      'aria-label': a.coche ? `${a.nom} : marquer à racheter` : `${a.nom} : marquer comme en stock`,
+      'aria-pressed': String(Boolean(a.coche)),
+      onclick: () => basculer(a),
     }),
     el('span', { class: 'nom' }, a.nom),
     a.quantite ? el('span', { class: 'qte' }, a.quantite) : null,
     el('button', {
-      class: 'ranger', 'aria-label': `Changer le rayon de ${a.nom}`,
-      onclick: () => ouvrirChoixRayon(a),
+      class: 'ranger', 'aria-label': `Options de ${a.nom}`,
+      onclick: () => ouvrirMenuArticle(a),
     }, '⋯'),
   );
 }
@@ -123,20 +141,42 @@ function rendreHistorique(hote) {
 
 // ══════════════════ Actions sur les articles ══════════════════
 
-/** Cocher fait disparaître l'article immédiatement (§7) : pas de zone « acheté ». */
-async function cocher(a) {
-  etat.articles = etat.articles.filter((x) => x.id !== a.id);
+/**
+ * Bascule l'état de l'article. La case ne veut plus dire « acheté, on l'efface »
+ * mais « on en a » : la ligne reste, et se décoche le jour où le produit vient
+ * à manquer. Sous le filtre « À acheter », cocher la fait donc disparaître de
+ * la vue sans la retirer de l'inventaire.
+ *
+ * L'état est inversé à l'écran avant la réponse de la base : dans un magasin,
+ * la latence rendrait le geste hésitant. Il est remis en place si l'écriture
+ * échoue.
+ */
+async function basculer(a) {
+  const vise = !a.coche;
+  a.coche = vise;
   rendreCourses();
   try {
-    await db.majArticle(a.id, { coche: true });
+    await db.majArticle(a.id, { coche: vise });
   } catch (e) {
-    etat.articles.push(a);
+    a.coche = !vise;
     rendreCourses();
-    toast(`Impossible de cocher : ${e.message}`);
+    toast(`Impossible d’enregistrer : ${e.message}`);
   }
 }
 
-function ouvrirChoixRayon(a) {
+/** Décoche un article déjà présent — utilisé quand on le ressaisit à la barre
+ *  d'ajout, ce qui veut dire « il en faut », pas « crée un doublon ». */
+async function decocher(a) {
+  if (!a.coche) return;
+  a.coche = false;
+  try {
+    await db.majArticle(a.id, { coche: false });
+  } catch {
+    a.coche = true;   // le rendu qui suit l'appel remettra la ligne comme il faut
+  }
+}
+
+function ouvrirMenuArticle(a) {
   const choix = groupeOptions(RAYONS.map((r) => ({ cle: r, libelle: r })), a.rayon, {
     vert: true,
     onChange: async (rayon) => {
@@ -160,21 +200,38 @@ function ouvrirChoixRayon(a) {
     },
   });
 
+  // Retirer définitivement est une action de plein droit, et non un recours
+  // caché sous le choix du rayon : la liste étant devenue un inventaire, elle
+  // récupère au passage des produits ponctuels qui n'ont rien à y faire.
+  const retirer = async () => {
+    fermerFeuille();
+    const oui = await confirmer(`Retirer « ${a.nom} » ?`, {
+      detail: 'L’article disparaît de la liste, coché ou non. Rien d’autre n’est touché.',
+      texteOk: 'Retirer', danger: true,
+    });
+    if (!oui) return;
+    const memoire = etat.articles;
+    etat.articles = etat.articles.filter((x) => x.id !== a.id);
+    rendreCourses();
+    try {
+      await db.supprimerArticle(a.id);
+    } catch (e) {
+      etat.articles = memoire;
+      rendreCourses();
+      toast(`Suppression impossible : ${e.message}`);
+    }
+  };
+
   ouvrirFeuille(el('div', {},
     el('h2', {}, a.nom),
+    el('button', { class: 'btn btn-secondaire', onclick: () => { fermerFeuille(); basculer(a); } },
+      a.coche ? 'Marquer à racheter' : 'Marquer comme en stock'),
+    el('button', { class: 'btn btn-destructif', onclick: retirer }, 'Retirer de la liste'),
+
+    el('div', { class: 'separateur' }),
     el('p', { class: 'feuille-info' },
       'Dans quel rayon le ranger ? Le choix est mémorisé pour les prochaines fois.'),
     choix,
-    el('div', { class: 'separateur' }),
-    el('button', {
-      class: 'btn btn-destructif',
-      onclick: async () => {
-        fermerFeuille();
-        etat.articles = etat.articles.filter((x) => x.id !== a.id);
-        rendreCourses();
-        try { await db.supprimerArticle(a.id); } catch (e) { toast(`Suppression impossible : ${e.message}`); }
-      },
-    }, 'Retirer de la liste'),
   ));
 }
 
@@ -186,18 +243,26 @@ export async function ajouterDepuisTexte(texte) {
   const morceaux = decouper(texte);
   if (!morceaux.length) return;
 
-  const dejaLa = new Set(etat.articles
+  const dejaLa = new Map(etat.articles
     .filter((a) => a.liste_id === liste.id)
-    .map((a) => normaliser(a.nom)));
+    .map((a) => [normaliser(a.nom), a]));
 
   const aInserer = [];
   let doublons = 0;
+  let reveilles = 0;
   for (const morceau of morceaux) {
     const { nom, quantite } = extraireQuantite(morceau);
     const cle = normaliser(nom);
     if (!cle) continue;
-    if (dejaLa.has(cle)) { doublons++; continue; }   // l'autre l'a peut-être déjà noté
-    dejaLa.add(cle);
+
+    const existant = dejaLa.get(cle);
+    if (existant) {
+      // Ressaisir un produit déjà là veut dire « il en faut » : on le décoche
+      // plutôt que d'annoncer un doublon ou d'en créer un second.
+      if (existant.coche) { await decocher(existant); reveilles++; } else { doublons++; }
+      continue;
+    }
+    dejaLa.set(cle, null);
     aInserer.push({
       liste_id: liste.id,
       espace_id: etat.espaceId,
@@ -207,8 +272,15 @@ export async function ajouterDepuisTexte(texte) {
     });
   }
 
+  const bilan = (n) => [
+    n ? `${n} ajouté${n > 1 ? 's' : ''}` : '',
+    reveilles ? `${reveilles} à racheter` : '',
+    doublons ? `${doublons} déjà là` : '',
+  ].filter(Boolean).join(' · ');
+
   if (!aInserer.length) {
-    toast(doublons ? 'Déjà dans la liste' : 'Rien à ajouter');
+    rendreCourses();
+    toast(bilan(0) || 'Rien à ajouter');
     return;
   }
 
@@ -216,11 +288,9 @@ export async function ajouterDepuisTexte(texte) {
     const crees = await db.ajouterArticles(aInserer);
     etat.articles.push(...crees);
     rendreCourses();
-    const n = crees.length;
-    toast(doublons
-      ? `${n} ajouté${n > 1 ? 's' : ''} · ${doublons} déjà là`
-      : `${n} article${n > 1 ? 's' : ''} ajouté${n > 1 ? 's' : ''}`);
+    toast(bilan(crees.length));
   } catch (e) {
+    rendreCourses();
     toast(`Impossible d’ajouter : ${e.message}`);
   }
 }

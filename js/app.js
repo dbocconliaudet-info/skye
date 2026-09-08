@@ -480,6 +480,15 @@ function brancherEvenements() {
   construireOngletsMois();
   $('[data-action="nouvel-anniversaire"]').addEventListener('click', ouvrirNouvelAnniversaire);
 
+  // — Courses : filtre à acheter / tout
+  for (const b of $$('[data-filtre-courses]')) {
+    b.addEventListener('click', () => {
+      etat.filtreCourses = b.dataset.filtreCourses;
+      for (const autre of $$('[data-filtre-courses]')) autre.classList.toggle('on', autre === b);
+      rendreCourses();
+    });
+  }
+
   // — Courses : barre d'ajout
   $('#barre-ajout').addEventListener('submit', (e) => {
     e.preventDefault();
