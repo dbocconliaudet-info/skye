@@ -118,9 +118,12 @@ export const rejoindreEspace = async (jeton, pseudo, dateNaissance, membreId) =>
     p_membre_id: membreId || null,
   }));
 
+/** `select('*')` et non la liste des colonnes : c'est la troisième fois qu'un
+ *  champ ajouté à `espaces` arrive jusqu'ici sans être demandé, et l'oubli est
+ *  silencieux — la valeur revient simplement vide. La table tient en cinq
+ *  colonnes, toutes utilisées. */
 export async function espaceParId(id) {
-  const { data, error } = await sb.from('espaces')
-    .select('id, nom, lien_invitation, date_mariage_pacs').eq('id', id).maybeSingle();
+  const { data, error } = await sb.from('espaces').select('*').eq('id', id).maybeSingle();
   if (error) throw new Error(error.message);
   return data;
 }
@@ -264,6 +267,7 @@ export const marquerMessageLu = async (id) =>
  *  chaque insert/update/delete venant de l'autre téléphone. */
 export function abonner(espaceId, auChangement) {
   const canal = sb.channel(`espace-${espaceId}`);
+
   for (const table of ['taches', 'listes_courses', 'articles_courses', 'membres',
     'dictionnaire_rayons', 'depenses', 'anniversaires']) {
     canal.on(
@@ -272,6 +276,17 @@ export function abonner(espaceId, auChangement) {
       (msg) => auChangement(table, msg),
     );
   }
+
+  // L'espace lui-même, à part : il ne porte pas de colonne `espace_id`, c'est
+  // sa propre clé qui l'identifie. Il n'était pas abonné jusqu'ici — ses champs
+  // ne changeaient presque jamais — mais le compteur « dernier moment à deux »
+  // se remet à zéro d'un téléphone et doit se voir sur l'autre.
+  canal.on(
+    'postgres_changes',
+    { event: '*', schema: 'public', table: 'espaces', filter: `id=eq.${espaceId}` },
+    (msg) => auChangement('espaces', msg),
+  );
+
   canal.subscribe();
   return () => sb.removeChannel(canal);
 }

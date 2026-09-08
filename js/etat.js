@@ -12,6 +12,7 @@ export const etat = {
   espaceNom: '',
   lienInvitation: '',
   dateMariage: '',
+  dernierMomentADeux: '',   // horodatage ; le compteur de l'accueil en découle
   membreId: null,
 
   // Données chargées depuis Supabase
@@ -24,7 +25,8 @@ export const etat = {
   dico: new Map(),          // mot normalisé -> rayon appris par le couple
 
   // Navigation
-  module: 'taches',          // 'taches' | 'courses' | 'tricount' | 'anniversaires'
+  // 'accueil' | 'taches' | 'courses' | 'tricount' | 'anniversaires'
+  module: 'accueil',
   ongletTaches: 'actives',   // 'actives' | 'historique'
   filtreHisto: 'tout',       // 'tout' | 'fait' | 'sans_objet'
   groupement: 'personne',    // 'personne' | 'categorie' | 'priorite'
@@ -35,7 +37,8 @@ export const etat = {
 /** Remet l'état à zéro à la déconnexion, sans toucher aux préférences d'affichage. */
 export function oublierSession() {
   Object.assign(etat, {
-    espaceId: null, espaceNom: '', lienInvitation: '', dateMariage: '', membreId: null,
+    espaceId: null, espaceNom: '', lienInvitation: '', dateMariage: '',
+    dernierMomentADeux: '', membreId: null,
     membres: [], taches: [], listes: [], articles: [], depenses: [], anniversaires: [],
     dico: new Map(), listeActiveId: null,
   });

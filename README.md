@@ -60,12 +60,13 @@ tableau de bord Supabase → **Table Editor** → `espaces` → colonne
 3. Coller **tout** le contenu de [`supabase/schema.sql`](supabase/schema.sql) → **Run**
 4. Recommencer avec [`supabase/schema-v2.sql`](supabase/schema-v2.sql), et faire
    les réglages d'authentification décrits juste au-dessus
-5. Recommencer avec [`supabase/schema-v3.sql`](supabase/schema-v3.sql), puis
-   [`supabase/schema-v4.sql`](supabase/schema-v4.sql)
+5. Recommencer avec [`supabase/schema-v3.sql`](supabase/schema-v3.sql),
+   [`supabase/schema-v4.sql`](supabase/schema-v4.sql), puis
+   [`supabase/schema-v5.sql`](supabase/schema-v5.sql)
 
 Les scripts sont rejouables sans risque : les relancer ne détruit aucune donnée.
 Ils s'exécutent dans l'ordre — `v2` s'appuie sur les tables de `schema.sql`,
-`v3` et `v4` sur les règles de sécurité de `v2`.
+les suivants sur les règles de sécurité de `v2`.
 
 ### 2. Publier le site sur GitHub Pages
 
@@ -134,7 +135,7 @@ JavaScript exigent un vrai serveur (`http://`, pas `file://`).
 | `js/etat.js` | État de l'app en mémoire |
 | `js/ui.js` | Briques d'interface : feuille modale, toast, dates |
 | `js/rayons.js` | Dictionnaire des rayons, découpage de la dictée |
-| `js/taches.js` | Module « On s'en occupe » |
+| `js/taches.js` | Module « To do » |
 | `js/courses.js` | Module « Courses » |
 | `js/tricount.js` | Module « Tricount » : dépenses et solde |
 | `js/anniversaires.js` | Module « Anniversaires » |
@@ -144,6 +145,7 @@ JavaScript exigent un vrai serveur (`http://`, pas `file://`).
 | `supabase/schema-v2.sql` | Comptes, Row Level Security, dates, messages |
 | `supabase/schema-v3.sql` | Les dépenses du module « Tricount » |
 | `supabase/schema-v4.sql` | Les anniversaires |
+| `supabase/schema-v5.sql` | Le compteur « dernier moment à deux » de l'accueil |
 | `brand/` | Le kit de marque : logotype, icônes, animation de lancement |
 | `logo/` | La charte complète et le kit d'origine, pour référence |
 
@@ -151,13 +153,20 @@ JavaScript exigent un vrai serveur (`http://`, pas `file://`).
 
 ## Ce que fait l'app
 
+**Accueil**
+- Une grille de cartes, une par module, qui s'ouvre au lancement de l'app
+- Un compteur « dernier moment à deux », remis à zéro à la main après
+  confirmation, partagé par le couple et synchronisé entre les deux téléphones
+- Ajouter un module se réduit à une ligne dans `MODULES` (`js/app.js`) et sa
+  vue dans `index.html` : c'est ce que cette grille cherchait à rendre simple
+
 **Comptes et espace**
 - Un compte email + mot de passe par personne, avec un pseudo affiché partout
 - Mot de passe oublié : chacun reçoit son lien à sa propre adresse
 - La base ne répond qu'aux comptes authentifiés, et chacun ne voit que son espace
 - Dates de naissance et date de mariage / PACS, modifiables dans les Réglages
 
-**Module « On s'en occupe »**
+**Module « To do »**
 - Board à colonnes qui défilent, regroupables par personne, par catégorie ou
   par priorité
 - Onglets *À faire / En cours* et *Historique* (filtrable Fait / Devenu sans objet)

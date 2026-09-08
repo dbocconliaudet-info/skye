@@ -194,11 +194,23 @@
       <span class="logotype">Skye</span>
       <button class="btn-reglages" data-action="ouvrir-reglages" aria-label="Réglages">⚙</button>
     </div>
-    <div class="titre" id="titre-module">On s'en occupe</div>
+    <!-- Masquée sur l'accueil : la flèche n'a alors nulle part où revenir. -->
+    <div class="ligne-titre masque" id="ligne-titre">
+      <button class="btn-retour" data-action="retour-modules" aria-label="Retour à l'accueil">←</button>
+      <div class="titre" id="titre-module"></div>
+    </div>
   </header>
 
-  <!-- ─────────── Module « On s'en occupe » ─────────── -->
-  <main id="vue-taches" class="vue">
+  <!-- ─────────── Accueil ─────────── -->
+  <main id="vue-accueil" class="vue">
+    <div class="contenu-accueil">
+      <div id="bandeau-moment"></div>
+      <div id="grille-modules" class="grille-modules"></div>
+    </div>
+  </main>
+
+  <!-- ─────────── Module « To do » ─────────── -->
+  <main id="vue-taches" class="vue masque">
     <div class="segmented" role="tablist">
       <button class="on" data-onglet-taches="actives" role="tab">À faire / En cours</button>
       <button data-onglet-taches="historique" role="tab">Historique</button>
@@ -245,25 +257,6 @@
     <button class="fab" data-action="nouvel-anniversaire" aria-label="Nouvel anniversaire">+</button>
   </main>
 
-  <!-- ─────────── Barre d'onglets ─────────── -->
-  <nav class="tabbar">
-    <button class="on" data-module="taches">
-      <span class="tab-ico">✓</span>
-      <span>On s'en occupe</span>
-    </button>
-    <button data-module="courses">
-      <span class="tab-ico">🛒</span>
-      <span>Courses</span>
-    </button>
-    <button data-module="tricount">
-      <span class="tab-ico">💶</span>
-      <span>Tricount</span>
-    </button>
-    <button data-module="anniversaires">
-      <span class="tab-ico">🎂</span>
-      <span>Anniversaires</span>
-    </button>
-  </nav>
 </div>
 
 <!-- ══════════════════ Feuille modale ══════════════════ -->

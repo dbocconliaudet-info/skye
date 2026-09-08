@@ -1,4 +1,4 @@
-// Module « On s'en occupe » (§6 du cahier des charges).
+// Module « To do » — « On s'en occupe » dans le cahier des charges (§6).
 
 import {
   $, el, vider, montrer, toast, ouvrirFeuille, fermerFeuille, confirmer, groupeOptions,

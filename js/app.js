@@ -2,7 +2,7 @@
 
 import {
   $, $$, el, vider, montrer, toast, ouvrirFeuille, fermerFeuille, confirmer,
-  feuilleEstOuverte, formaterDate,
+  feuilleEstOuverte, formaterDate, joursRestants, versIso,
 } from './ui.js';
 import { etat, oublierSession, pseudoDe, moi, partenaire } from './etat.js';
 import * as db from './db.js';
@@ -284,6 +284,7 @@ async function rechargerDonnees() {
     etat.espaceNom = espace.nom;
     etat.lienInvitation = espace.lien_invitation;
     etat.dateMariage = espace.date_mariage_pacs || '';
+    etat.dernierMomentADeux = espace.dernier_moment_a_deux || '';
   }
   etat.membres = membres;
   etat.taches = taches;
@@ -296,6 +297,7 @@ async function rechargerDonnees() {
 }
 
 function rendreTout() {
+  rendreAccueil();
   rendreTaches();
   rendreCourses();
   rendreTricount();
@@ -319,21 +321,92 @@ function planifierRechargement() {
 
 // ══════════════════ Navigation ══════════════════
 
-const TITRES_MODULES = {
-  taches: 'On s’en occupe',
-  courses: 'Courses',
-  tricount: 'Tricount',
-  anniversaires: 'Anniversaires',
-};
+/**
+ * La liste des modules, source unique : elle dessine les cartes de l'accueil,
+ * fournit les titres des en-têtes et détermine les vues à masquer. Ajouter un
+ * module se réduit donc à une ligne ici, plus sa vue dans `index.html` — c'est
+ * exactement ce que la refonte de l'accueil cherchait à obtenir.
+ */
+const MODULES = [
+  { cle: 'taches', titre: 'To do', icone: '✓' },
+  { cle: 'courses', titre: 'Courses', icone: '🛒' },
+  { cle: 'tricount', titre: 'Tricount', icone: '💶' },
+  { cle: 'anniversaires', titre: 'Anniversaires', icone: '🎂' },
+];
 
 function basculerModule(nom) {
   etat.module = nom;
-  montrer($('#vue-taches'), nom === 'taches');
-  montrer($('#vue-courses'), nom === 'courses');
-  montrer($('#vue-tricount'), nom === 'tricount');
-  montrer($('#vue-anniversaires'), nom === 'anniversaires');
-  $('#titre-module').textContent = TITRES_MODULES[nom] || '';
-  for (const b of $$('.tabbar button')) b.classList.toggle('on', b.dataset.module === nom);
+  montrer($('#vue-accueil'), nom === 'accueil');
+  for (const m of MODULES) montrer($(`#vue-${m.cle}`), nom === m.cle);
+
+  // Sur l'accueil, ni titre ni flèche : la marque suffit, et il n'y a nulle
+  // part où revenir.
+  const module = MODULES.find((m) => m.cle === nom);
+  montrer($('#ligne-titre'), Boolean(module));
+  $('#titre-module').textContent = module ? module.titre : '';
+
+  if (nom === 'accueil') rendreAccueil();
+}
+
+// ══════════════════ Accueil ══════════════════
+
+/** Jours écoulés depuis le dernier moment à deux, en jours calendaires locaux.
+ *  On repasse par la date locale plutôt que de découper l'horodatage : celui-ci
+ *  arrive en UTC, et un moment enregistré à 1 h du matin compterait un jour de
+ *  trop la moitié de l'année. */
+function joursDepuisLeMoment() {
+  if (!etat.dernierMomentADeux) return 0;
+  return Math.max(0, -joursRestants(versIso(new Date(etat.dernierMomentADeux))));
+}
+
+function bandeauMoment() {
+  const jours = joursDepuisLeMoment();
+  const phrase = jours === 0
+    ? 'Vous avez passé un moment à deux aujourd’hui.'
+    : `depuis votre dernier moment à deux.`;
+
+  const remettreAZero = async () => {
+    const oui = await confirmer('On vient de passer un moment à deux ?', {
+      detail: 'Le compteur repart de zéro aujourd’hui.',
+      texteOk: 'Confirmer',
+    });
+    if (!oui) return;
+    try {
+      const espace = await db.majEspace(etat.espaceId,
+        { dernier_moment_a_deux: new Date().toISOString() });
+      etat.dernierMomentADeux = espace.dernier_moment_a_deux;
+      rendreAccueil();
+      toast('Compteur remis à zéro');
+    } catch (e) {
+      toast(`Enregistrement impossible : ${e.message}`);
+    }
+  };
+
+  return el('div', { class: 'moment' },
+    jours === 0
+      ? el('p', { class: 'moment-phrase-seule' }, phrase)
+      : el('div', {},
+        el('p', { class: 'moment-compte' }, String(jours),
+          el('span', { class: 'moment-unite' }, jours === 1 ? ' jour' : ' jours')),
+        el('p', { class: 'moment-phrase' }, phrase)),
+    el('button', { class: 'btn btn-secondaire', onclick: remettreAZero },
+      'On vient de passer un moment à deux'),
+  );
+}
+
+function rendreAccueil() {
+  vider($('#bandeau-moment')).append(bandeauMoment());
+
+  const grille = vider($('#grille-modules'));
+  for (const m of MODULES) {
+    grille.append(el('button', {
+      class: 'carte-module',
+      onclick: () => basculerModule(m.cle),
+    },
+      el('span', { class: 'carte-module-ico' }, m.icone),
+      el('span', { class: 'carte-module-nom' }, m.titre),
+    ));
+  }
 }
 
 function brancherEvenements() {
@@ -373,10 +446,8 @@ function brancherEvenements() {
     preparerRejoindre(jeton, '#accueil-code');
   });
 
-  // — Barre d'onglets
-  for (const b of $$('.tabbar button')) {
-    b.addEventListener('click', () => basculerModule(b.dataset.module));
-  }
+  // — Retour à l'accueil depuis un module
+  $('[data-action="retour-modules"]').addEventListener('click', () => basculerModule('accueil'));
 
   // — Tâches : onglets et filtres
   for (const b of $$('[data-onglet-taches]')) {
