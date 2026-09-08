@@ -178,7 +178,11 @@ JavaScript exigent un vrai serveur (`http://`, pas `file://`).
 
 **Module « Courses »**
 - Liste permanente + listes ponctuelles nommées librement
-- Cocher fait disparaître l'article immédiatement
+- La liste permanente est un **inventaire** : cochée = on en a, décochée = il
+  faut en racheter. La ligne reste, la case bascule dans les deux sens
+- Filtre *À acheter* (par défaut) / *Tout*, et menu ⋯ par article pour le
+  retirer définitivement — les produits ponctuels n'ont pas à y rester
+- Retaper un produit déjà là mais coché le décoche, au lieu de créer un doublon
 - Classement automatique par rayon, avec dictionnaire qui apprend les corrections
 - Ajout en texte libre ou par dictée : « du lait, des œufs et du pain » crée
   trois articles ; « 500 g de farine » et « pommes x3 » remplissent la quantité

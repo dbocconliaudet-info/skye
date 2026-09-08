@@ -176,11 +176,27 @@ export const majListe = async (id, patch) =>
 export const supprimerListe = async (id) =>
   ok(await sb.from('listes_courses').delete().eq('id', id));
 
-/** Articles non cochés de l'espace. Un article coché disparaît de la liste (§7) :
- *  on ne le rapatrie donc jamais, ce qui garde le chargement léger dans la durée. */
-export const chargerArticles = async (espaceId) =>
-  ok(await sb.from('articles_courses')
-    .select('*').eq('espace_id', espaceId).eq('coche', false).order('cree_le'));
+/**
+ * Tous les articles des listes **actives** de l'espace, cochés ou non.
+ *
+ * Les cochés reviennent désormais : la liste permanente est un inventaire, où
+ * coché signifie « on en a » et non « acheté, terminé ».
+ *
+ * D'où la restriction aux listes actives, qui ne servait à rien tant qu'on ne
+ * prenait que les non cochés : sans elle, chaque liste ponctuelle clôturée
+ * laisserait ses articles s'accumuler dans tous les chargements à venir. Les
+ * listes closes se relisent à la demande, via `articlesDeListe`.
+ */
+export async function chargerArticles(espaceId) {
+  const lignes = ok(await sb.from('articles_courses')
+    .select('*, listes_courses!inner(statut)')
+    .eq('espace_id', espaceId)
+    .eq('listes_courses.statut', 'active')
+    .order('cree_le'));
+  // La jointure ne sert qu'à filtrer : on ne garde pas la liste imbriquée,
+  // pour que ces lignes aient la même forme que celles d'`ajouterArticles`.
+  return lignes.map(({ listes_courses, ...article }) => article);
+}
 
 export const ajouterArticles = async (articles) =>
   ok(await sb.from('articles_courses').insert(articles).select());
