@@ -14,7 +14,6 @@
 
 :root{
   /* Géométrie propre à l'app, hors charte de marque. */
-  --h-tabbar:64px;
   --h-controle:44px;          /* hauteur de bouton fixée par la charte */
   --largeur-colonne:290px;
   --safe-bas:env(safe-area-inset-bottom, 0px);
@@ -266,9 +265,28 @@ input,select,textarea{font-family:var(--font-ui);font-size:16px;color:inherit;}
   box-shadow:var(--shadow-sm);
 }
 .btn-reglages:active{transform:translateY(-50%) scale(.94);}
+
+/* La flèche est posée dans le flux, à gauche du titre, et non en absolu : le
+   titre reste ainsi centré sur la place qui lui reste, sans risque de passer
+   sous la flèche quand il est long. */
+.ligne-titre{
+  display:flex;align-items:center;gap:var(--space-2);margin-top:var(--space-1);
+}
+.btn-retour{
+  border:none;background:transparent;color:var(--ink-2);
+  font-size:22px;line-height:1;flex-shrink:0;
+  width:var(--space-8);height:var(--space-8);
+  display:flex;align-items:center;justify-content:center;
+  border-radius:var(--radius-pill);
+  transition:transform var(--dur-fast) var(--ease);
+}
+.btn-retour:active{transform:scale(.9);}
 .topbar .titre{
-  font:var(--text-h1);letter-spacing:var(--tracking-h1);
-  color:var(--ink);margin-top:var(--space-1);
+  flex:1;min-width:0;
+  font:var(--text-h1);letter-spacing:var(--tracking-h1);color:var(--ink);
+  /* Compense la largeur de la flèche pour que le titre reste optiquement
+     centré dans l'en-tête. */
+  margin-right:var(--space-8);
 }
 
 /* position:relative sert d'ancrage au bouton flottant « + ». */
@@ -364,7 +382,7 @@ input,select,textarea{font-family:var(--font-ui);font-size:16px;color:inherit;}
 
 .fab{
   position:absolute;right:var(--space-5);
-  bottom:calc(var(--h-tabbar) + var(--safe-bas) + var(--space-4));
+  bottom:calc(var(--safe-bas) + var(--space-5));
   width:var(--space-14);height:var(--space-14);border-radius:var(--radius-pill);
   border:none;background:var(--skye-red);color:var(--sur-marque);
   font-size:28px;font-weight:400;line-height:1;
@@ -444,19 +462,52 @@ input,select,textarea{font-family:var(--font-ui);font-size:16px;color:inherit;}
 
 /* ══════════════════ Barre d'onglets ══════════════════ */
 
-.tabbar{
-  display:flex;flex-shrink:0;background:var(--surface);
-  border-top:1px solid var(--line);
-  padding-bottom:var(--safe-bas);height:calc(var(--h-tabbar) + var(--safe-bas));
+/* ══════════════════ Accueil ══════════════════ */
+
+.contenu-accueil{
+  flex:1;overflow-y:auto;
+  padding:var(--space-2) var(--space-4) calc(var(--space-6) + var(--safe-bas));
+  -webkit-overflow-scrolling:touch;
 }
-.tabbar button{
-  flex:1;border:none;background:transparent;display:flex;flex-direction:column;
-  align-items:center;justify-content:center;gap:2px;
-  font:var(--text-caption);font-weight:600;color:var(--ink-4);padding:0;
-  transition:color var(--dur) var(--ease);
+
+/* Le bandeau du moment à deux : traité comme l'information la plus importante
+   de l'accueil, donc en pleine largeur et au-dessus de la grille, avec le
+   nombre en typographie de titre — le même traitement que le solde de Tricount,
+   pour les mêmes raisons. */
+.moment{
+  background:var(--surface);border:1px solid var(--line-2);
+  border-radius:var(--radius-xl);padding:var(--space-5);
+  box-shadow:var(--shadow-md);text-align:center;margin-bottom:var(--space-5);
 }
-.tabbar button.on{color:var(--skye-red);}
-.tab-ico{font-size:19px;line-height:1;}
+.moment-compte{
+  font:var(--text-display);letter-spacing:var(--tracking-display);
+  color:var(--ink);margin:0;
+}
+.moment-unite{font:var(--text-h2);letter-spacing:var(--tracking-h2);color:var(--ink-3);}
+.moment-phrase{font:var(--text-sm);color:var(--ink-3);margin:var(--space-1) 0 var(--space-4);}
+.moment-phrase-seule{
+  font:var(--text-h3);letter-spacing:var(--tracking-h3);
+  color:var(--ink);margin:0 0 var(--space-4);
+}
+.moment .btn{margin:0;}
+
+.grille-modules{
+  display:grid;grid-template-columns:repeat(2,1fr);gap:var(--space-3);
+}
+.carte-module{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:var(--space-2);aspect-ratio:1;
+  background:var(--surface);border:1px solid var(--line-2);
+  border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);
+  padding:var(--space-4);
+  transition:transform var(--dur-fast) var(--ease);
+}
+.carte-module:active{transform:scale(.97);}
+.carte-module-ico{font-size:34px;line-height:1;}
+.carte-module-nom{
+  font:var(--text-h3);letter-spacing:var(--tracking-h3);
+  color:var(--ink);text-align:center;
+}
 
 /* ══════════════════ Module « Tricount » ══════════════════ */
 
@@ -625,7 +676,8 @@ input,select,textarea{font-family:var(--font-ui);font-size:16px;color:inherit;}
 /* ══════════════════ Toast ══════════════════ */
 
 .toast{
-  position:fixed;left:50%;bottom:calc(var(--h-tabbar) + var(--safe-bas) + var(--space-5));
+  /* Au-dessus du bouton flottant, qui occupe le coin bas droit. */
+  position:fixed;left:50%;bottom:calc(var(--safe-bas) + var(--space-18));
   transform:translate(-50%,var(--space-3));z-index:90;
   background:var(--ink);color:var(--surface);
   font:var(--text-sm);font-weight:600;
@@ -658,8 +710,15 @@ input,select,textarea{font-family:var(--font-ui);font-size:16px;color:inherit;}
      rétrécir ces éléments flex à la largeur de leur contenu au lieu de les
      centrer sur toute la largeur disponible. */
   .segmented,.filtres,.addbar{max-width:900px;width:100%;margin-left:auto;margin-right:auto;}
+  /* Sans cette limite, la flèche de retour part se coller au bord de l'écran,
+     à des centaines de pixels du titre qu'elle est censée précéder. */
+  .ligne-titre{max-width:900px;width:100%;margin-left:auto;margin-right:auto;}
   .contenu-courses{max-width:900px;margin:0 auto;width:100%;}
   .contenu-tricount,.contenu-anniversaires{max-width:640px;margin:0 auto;width:100%;}
+  .contenu-accueil{max-width:640px;margin:0 auto;width:100%;}
+  /* Quatre cartes par ligne sur grand écran : à deux colonnes elles
+     deviendraient des pavés d'un demi-écran de haut. */
+  .grille-modules{grid-template-columns:repeat(4,1fr);}
   .colonnes{justify-content:flex-start;max-width:900px;margin:0 auto;width:100%;}
   .voile{align-items:center;}
   .feuille{border-radius:var(--radius-xl);max-height:86dvh;}
