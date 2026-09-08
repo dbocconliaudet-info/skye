@@ -134,9 +134,54 @@ function rendreHistorique(hote) {
     hote.append(el('div', { class: 'article' },
       el('span', { class: 'nom' }, l.nom,
         el('span', { class: 'sous-ligne' }, `Clôturée le ${formaterDate(l.cloturee_le || l.cree_le)}`)),
-      el('button', { class: 'btn-lien', onclick: () => ouvrirDuplication(l) }, 'Dupliquer'),
+      el('button', {
+        class: 'ranger', 'aria-label': `Options de ${l.nom}`,
+        onclick: () => ouvrirMenuListe(l),
+      }, '⋯'),
     ));
   }
+}
+
+/** Menu d'une liste clôturée. Les deux actions sont rares et l'une est
+ *  irréversible : aucune des deux n'a sa place à portée d'un doigt distrait. */
+function ouvrirMenuListe(l) {
+  const supprimer = async () => {
+    fermerFeuille();
+    const oui = await confirmer(`Supprimer « ${l.nom} » ?`, {
+      detail: 'La liste et les articles qu’elle contenait sont effacés définitivement. '
+        + 'Vous ne pourrez plus la dupliquer.',
+      texteOk: 'Supprimer', danger: true,
+    });
+    if (!oui) return;
+
+    const memoireListes = etat.listes;
+    const memoireArticles = etat.articles;
+    etat.listes = etat.listes.filter((x) => x.id !== l.id);
+    // Les articles des listes closes ne sont plus chargés, mais une liste
+    // clôturée à l'instant peut encore en avoir en mémoire.
+    etat.articles = etat.articles.filter((a) => a.liste_id !== l.id);
+    rendreCourses();
+    try {
+      // Les articles partent avec, par cascade déclarée dans le schéma.
+      await db.supprimerListe(l.id);
+      toast('Liste supprimée');
+    } catch (e) {
+      etat.listes = memoireListes;
+      etat.articles = memoireArticles;
+      rendreCourses();
+      toast(`Suppression impossible : ${e.message}`);
+    }
+  };
+
+  ouvrirFeuille(el('div', {},
+    el('h2', {}, l.nom),
+    el('p', { class: 'feuille-info' },
+      `Clôturée le ${formaterDate(l.cloturee_le || l.cree_le)}.`),
+    el('button', { class: 'btn btn-secondaire', onclick: () => ouvrirDuplication(l) },
+      'Dupliquer cette liste'),
+    el('button', { class: 'btn btn-destructif', onclick: supprimer }, 'Supprimer définitivement'),
+    el('button', { class: 'btn btn-fantome', onclick: fermerFeuille }, 'Annuler'),
+  ));
 }
 
 // ══════════════════ Actions sur les articles ══════════════════

@@ -186,7 +186,8 @@ JavaScript exigent un vrai serveur (`http://`, pas `file://`).
 - Classement automatique par rayon, avec dictionnaire qui apprend les corrections
 - Ajout en texte libre ou par dictée : « du lait, des œufs et du pain » crée
   trois articles ; « 500 g de farine » et « pommes x3 » remplissent la quantité
-- Clôture d'une liste ponctuelle, historique consultable, duplication en un geste
+- Clôture d'une liste ponctuelle, historique consultable, duplication ou
+  suppression définitive depuis le menu ⋯ de chaque liste clôturée
 
 **Module « Tricount »**
 - Un solde en tête d'écran : qui doit combien à qui, et c'est tout
