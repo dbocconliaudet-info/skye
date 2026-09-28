@@ -9,6 +9,28 @@ puis [`brief/evolutions-v2-todomtadam.md`](brief/evolutions-v2-todomtadam.md) po
 
 ---
 
+## Mise à jour : les Courses en quatre magasins
+
+Une seule étape : **SQL Editor** → **New query** → coller tout
+[`supabase/schema-v6.sql`](supabase/schema-v6.sql) → **Run**. Rejouable sans
+risque, comme les précédents.
+
+Ce que le script fait de vos produits déjà saisis, maintenant que les cases à
+cocher ont disparu :
+
+- Les articles **non cochés** — ce qui restait à racheter — atterrissent dans
+  l'encadré **« Autres »**. Il n'y a plus qu'à les répartir dans les bons
+  magasins, ce qui prend quelques secondes.
+- Les articles **cochés** — « on en a », donc rien à acheter — **cessent
+  d'apparaître**. Une ligne veut désormais dire une seule chose : il faut
+  l'acheter. Rien n'est effacé pour autant : ces lignes restent en base, et le
+  script indique en commentaire la requête qui les ferait revenir.
+
+Les quatre noms de magasins se changent ensuite dans l'app, icône ⚙ →
+**Nos magasins**.
+
+---
+
 ## Mise à jour vers la v2 (comptes et sécurité)
 
 Si l'app tourne déjà avec la version précédente, trois étapes, dans cet ordre.
@@ -61,8 +83,9 @@ tableau de bord Supabase → **Table Editor** → `espaces` → colonne
 4. Recommencer avec [`supabase/schema-v2.sql`](supabase/schema-v2.sql), et faire
    les réglages d'authentification décrits juste au-dessus
 5. Recommencer avec [`supabase/schema-v3.sql`](supabase/schema-v3.sql),
-   [`supabase/schema-v4.sql`](supabase/schema-v4.sql), puis
-   [`supabase/schema-v5.sql`](supabase/schema-v5.sql)
+   [`supabase/schema-v4.sql`](supabase/schema-v4.sql),
+   [`supabase/schema-v5.sql`](supabase/schema-v5.sql), puis
+   [`supabase/schema-v6.sql`](supabase/schema-v6.sql)
 
 Les scripts sont rejouables sans risque : les relancer ne détruit aucune donnée.
 Ils s'exécutent dans l'ordre — `v2` s'appuie sur les tables de `schema.sql`,
@@ -134,9 +157,8 @@ JavaScript exigent un vrai serveur (`http://`, pas `file://`).
 | `js/db.js` | Comptes, accès à la base et abonnement temps réel |
 | `js/etat.js` | État de l'app en mémoire |
 | `js/ui.js` | Briques d'interface : feuille modale, toast, dates |
-| `js/rayons.js` | Dictionnaire des rayons, découpage de la dictée |
 | `js/taches.js` | Module « To do » |
-| `js/courses.js` | Module « Courses » |
+| `js/courses.js` | Module « Courses » : les quatre magasins et les lignes éditables |
 | `js/tricount.js` | Module « Tricount » : dépenses et solde |
 | `js/anniversaires.js` | Module « Anniversaires » |
 | `js/app.js` | Démarrage, onboarding, navigation |
@@ -146,6 +168,7 @@ JavaScript exigent un vrai serveur (`http://`, pas `file://`).
 | `supabase/schema-v3.sql` | Les dépenses du module « Tricount » |
 | `supabase/schema-v4.sql` | Les anniversaires |
 | `supabase/schema-v5.sql` | Le compteur « dernier moment à deux » de l'accueil |
+| `supabase/schema-v6.sql` | Les quatre magasins des Courses |
 | `brand/` | Le kit de marque : logotype, icônes, animation de lancement |
 | `logo/` | La charte complète et le kit d'origine, pour référence |
 
@@ -177,17 +200,19 @@ JavaScript exigent un vrai serveur (`http://`, pas `file://`).
   réglable tâche par tâche
 
 **Module « Courses »**
-- Liste permanente + listes ponctuelles nommées librement
-- La liste permanente est un **inventaire** : cochée = on en a, décochée = il
-  faut en racheter. La ligne reste, la case bascule dans les deux sens
-- Filtre *À acheter* (par défaut) / *Tout*, et menu ⋯ par article pour le
-  retirer définitivement — les produits ponctuels n'ont pas à y rester
-- Retaper un produit déjà là mais coché le décoche, au lieu de créer un doublon
-- Classement automatique par rayon, avec dictionnaire qui apprend les corrections
-- Ajout en texte libre ou par dictée : « du lait, des œufs et du pain » crée
-  trois articles ; « 500 g de farine » et « pommes x3 » remplissent la quantité
-- Clôture d'une liste ponctuelle, historique consultable, duplication ou
-  suppression définitive depuis le menu ⋯ de chaque liste clôturée
+- La **liste permanente** s'affiche en **quatre encadrés**, un par enseigne :
+  Grand Frais, Monoprix, Pharmacie, Autres — renommables dans les Réglages
+- Chaque encadré montre un aperçu ; son titre annonce le nombre total de
+  produits, et le toucher ouvre le magasin en pleine page
+- **Ni case à cocher, ni rayon, ni formulaire** : une ligne est un champ de
+  texte qu'on édite sur place. Une ligne présente veut dire « il faut
+  l'acheter » ; une fois acheté, on l'efface
+- Entrée crée la ligne suivante sans lâcher le clavier ; Retour arrière sur une
+  ligne vide la supprime ; un × efface une ligne d'un geste
+- On ajoute depuis la page pleine, ou directement dans un encadré de la grille
+- **Listes ponctuelles** nommées librement, d'un seul bloc sans découpage par
+  magasin, avec clôture, historique consultable, duplication et suppression
+  définitive depuis le menu ⋯ de chaque liste clôturée
 
 **Module « Tricount »**
 - Un solde en tête d'écran : qui doit combien à qui, et c'est tout

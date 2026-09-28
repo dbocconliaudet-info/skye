@@ -236,16 +236,9 @@
   <!-- ─────────── Module « Courses » ─────────── -->
   <main id="vue-courses" class="vue masque">
     <div id="onglets-listes" class="filtres listes-onglets"></div>
-    <div id="filtres-courses" class="filtres groupement">
-      <button class="puce on" data-filtre-courses="a_acheter">À acheter</button>
-      <button class="puce" data-filtre-courses="tout">Tout</button>
-    </div>
-    <div id="contenu-courses" class="contenu-courses"></div>
-
-    <form id="barre-ajout" class="addbar" autocomplete="off">
-      <input type="text" name="article" placeholder="Ajouter un article…" enterkeyhint="done">
-      <button type="submit" class="mic" aria-label="Ajouter">+</button>
-    </form>
+    <!-- Grille des quatre magasins, page d'un magasin ou liste ponctuelle :
+         `data-vue` dit lequel des trois, et la feuille de style suit. -->
+    <div id="contenu-courses" class="contenu-courses" data-vue="grille"></div>
   </main>
 
   <!-- ─────────── Module « Tricount » ─────────── -->

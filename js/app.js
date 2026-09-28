@@ -5,9 +5,10 @@ import {
   feuilleEstOuverte, formaterDate, joursRestants, versIso,
 } from './ui.js';
 import { etat, oublierSession, pseudoDe, moi, partenaire } from './etat.js';
+import { MAGASINS_DEFAUT, NB_MAGASINS } from './config.js';
 import * as db from './db.js';
 import { rendreTaches, ouvrirNouvelleTache, genererOccurrencesDues } from './taches.js';
-import { rendreCourses, ajouterDepuisTexte } from './courses.js';
+import { rendreCourses, retourCourses, nomMagasin } from './courses.js';
 import { rendreTricount, ouvrirNouvelleDepense } from './tricount.js';
 import {
   rendreAnniversaires, ouvrirNouvelAnniversaire, construireOngletsMois,
@@ -267,7 +268,7 @@ async function entrerDansApp() {
 }
 
 async function rechargerDonnees() {
-  const [espace, membres, taches, listes, articles, depenses, anniversaires, dico] =
+  const [espace, membres, taches, listes, articles, depenses, anniversaires] =
     await Promise.all([
       db.espaceParId(etat.espaceId),
       db.chargerMembres(etat.espaceId),
@@ -276,7 +277,6 @@ async function rechargerDonnees() {
       db.chargerArticles(etat.espaceId),
       db.chargerDepenses(etat.espaceId),
       db.chargerAnniversaires(etat.espaceId),
-      db.chargerDico(etat.espaceId),
     ]);
   // Relire l'espace à chaque fois évite de traîner un nom ou une date modifiés
   // depuis l'autre téléphone : ces trois champs ne passent pas par le temps réel.
@@ -285,6 +285,7 @@ async function rechargerDonnees() {
     etat.lienInvitation = espace.lien_invitation;
     etat.dateMariage = espace.date_mariage_pacs || '';
     etat.dernierMomentADeux = espace.dernier_moment_a_deux || '';
+    etat.magasins = espace.magasins || [];
   }
   etat.membres = membres;
   etat.taches = taches;
@@ -292,7 +293,6 @@ async function rechargerDonnees() {
   etat.articles = articles;
   etat.depenses = depenses;
   etat.anniversaires = anniversaires;
-  etat.dico = new Map(dico.map((d) => [d.mot, d.rayon]));
   rendreTout();
 }
 
@@ -346,6 +346,9 @@ function basculerModule(nom) {
   $('#titre-module').textContent = module ? module.titre : '';
 
   if (nom === 'accueil') rendreAccueil();
+  // Courses a sa propre sous-navigation : le titre ci-dessus est celui du
+  // module, et c'est à son rendu de le remplacer par le nom du magasin ouvert.
+  if (nom === 'courses') rendreCourses();
 }
 
 // ══════════════════ Accueil ══════════════════
@@ -446,8 +449,13 @@ function brancherEvenements() {
     preparerRejoindre(jeton, '#accueil-code');
   });
 
-  // — Retour à l'accueil depuis un module
-  $('[data-action="retour-modules"]').addEventListener('click', () => basculerModule('accueil'));
+  // — Retour depuis un module. Certains ont leur propre sous-navigation :
+  //   dans Courses, la flèche referme d'abord le magasin ouvert, et ce n'est
+  //   qu'une fois revenu à la grille qu'elle ramène à l'accueil.
+  $('[data-action="retour-modules"]').addEventListener('click', () => {
+    if (etat.module === 'courses' && retourCourses()) return;
+    basculerModule('accueil');
+  });
 
   // — Tâches : onglets et filtres
   for (const b of $$('[data-onglet-taches]')) {
@@ -479,24 +487,6 @@ function brancherEvenements() {
   // — Anniversaires
   construireOngletsMois();
   $('[data-action="nouvel-anniversaire"]').addEventListener('click', ouvrirNouvelAnniversaire);
-
-  // — Courses : filtre à acheter / tout
-  for (const b of $$('[data-filtre-courses]')) {
-    b.addEventListener('click', () => {
-      etat.filtreCourses = b.dataset.filtreCourses;
-      for (const autre of $$('[data-filtre-courses]')) autre.classList.toggle('on', autre === b);
-      rendreCourses();
-    });
-  }
-
-  // — Courses : barre d'ajout
-  $('#barre-ajout').addEventListener('submit', (e) => {
-    e.preventDefault();
-    const champ = e.currentTarget.article;
-    const texte = champ.value;
-    champ.value = '';
-    ajouterDepuisTexte(texte);
-  });
 
   // — Réglages
   $('[data-action="ouvrir-reglages"]').addEventListener('click', ouvrirReglages);
@@ -655,6 +645,46 @@ function sectionDates() {
   );
 }
 
+/**
+ * Les quatre enseignes du module Courses. Toujours quatre, ni plus ni moins :
+ * la grille 2×2 en dépend, et s'en tenir là évite un écran de gestion entier.
+ *
+ * Renommer ne déplace aucun produit — les noms sont rangés par position, et
+ * c'est la position que les articles retiennent. Une case renommée garde donc
+ * son contenu, ce qui est exactement ce qu'on veut en changeant d'enseigne.
+ */
+function sectionMagasins() {
+  const champs = Array.from({ length: NB_MAGASINS }, (_, i) => el('input', {
+    type: 'text', value: nomMagasin(i), maxlength: 24,
+    'aria-label': `Magasin ${i + 1}`,
+  }));
+
+  const enregistrer = async (e) => {
+    const noms = champs.map((c, i) => c.value.trim() || MAGASINS_DEFAUT[i]);
+    const bouton = e.currentTarget;
+    bouton.disabled = true;
+    bouton.textContent = 'Enregistrement…';
+    try {
+      await db.majEspace(etat.espaceId, { magasins: noms });
+      await rechargerDonnees();
+      fermerFeuille();
+      toast('Magasins enregistrés');
+    } catch (err) {
+      toast(`Enregistrement impossible : ${err.message}`);
+      bouton.disabled = false;
+      bouton.textContent = 'Enregistrer les magasins';
+    }
+  };
+
+  return el('div', {},
+    el('h3', { class: 'feuille-titre' }, 'Nos magasins'),
+    el('p', { class: 'feuille-info' },
+      'Les quatre encadrés de l’écran Courses. Renommer une case n’en déplace pas le contenu.'),
+    champs.map((c) => el('label', { class: 'champ' }, c)),
+    el('button', { class: 'btn btn-secondaire', onclick: enregistrer }, 'Enregistrer les magasins'),
+  );
+}
+
 function ouvrirReglages() {
   const quitter = async () => {
     fermerFeuille();
@@ -680,6 +710,9 @@ function ouvrirReglages() {
 
     el('div', { class: 'separateur' }),
     sectionDates(),
+
+    el('div', { class: 'separateur' }),
+    sectionMagasins(),
 
     el('div', { class: 'separateur' }),
     el('label', { class: 'champ' },

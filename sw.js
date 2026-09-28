@@ -11,7 +11,7 @@
  * URL : elles, on les sert depuis le cache en priorité.
  */
 
-const VERSION = 'skye-v4';
+const VERSION = 'skye-v5';
 const COQUILLE = [
   './',
   './index.html',
@@ -23,7 +23,6 @@ const COQUILLE = [
   './js/db.js',
   './js/etat.js',
   './js/ui.js',
-  './js/rayons.js',
   './js/taches.js',
   './js/courses.js',
   './js/tricount.js',
