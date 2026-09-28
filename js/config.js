@@ -21,6 +21,14 @@ export const CATEGORIES = [
   { cle: 'sante', libelle: 'Santé' },
 ];
 
+// Les quatre encadrés du module Courses, dans l'ordre de la grille 2×2.
+// Ces noms ne servent que de secours : la vraie valeur vit sur l'espace
+// (`espaces.magasins`), renommable depuis les Réglages. Toujours quatre — la
+// grille en dépend, et `NB_MAGASINS` est la seule chose à relire si un jour
+// ce nombre devait changer.
+export const MAGASINS_DEFAUT = ['Grand Frais', 'Monoprix', 'Pharmacie', 'Autres'];
+export const NB_MAGASINS = MAGASINS_DEFAUT.length;
+
 export const PRIORITES = [
   { cle: 'basse', libelle: 'Basse' },
   { cle: 'moyenne', libelle: 'Moyenne' },

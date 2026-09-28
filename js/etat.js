@@ -13,6 +13,7 @@ export const etat = {
   lienInvitation: '',
   dateMariage: '',
   dernierMomentADeux: '',   // horodatage ; le compteur de l'accueil en découle
+  magasins: [],             // les quatre enseignes, dans l'ordre des encadrés
   membreId: null,
 
   // Données chargées depuis Supabase
@@ -22,7 +23,6 @@ export const etat = {
   articles: [],
   depenses: [],
   anniversaires: [],
-  dico: new Map(),          // mot normalisé -> rayon appris par le couple
 
   // Navigation
   // 'accueil' | 'taches' | 'courses' | 'tricount' | 'anniversaires'
@@ -31,17 +31,20 @@ export const etat = {
   filtreHisto: 'tout',       // 'tout' | 'fait' | 'sans_objet'
   groupement: 'personne',    // 'personne' | 'categorie' | 'priorite'
   vueAnniversaires: 'a_venir', // 'a_venir' | 1..12
-  filtreCourses: 'a_acheter',  // 'a_acheter' | 'tout'
   listeActiveId: null,
+  // Index du magasin ouvert en pleine page, ou null quand on est sur la grille
+  // des quatre encadrés. Sous-navigation interne au module Courses : c'est elle
+  // qui décide où ramène la flèche de retour.
+  magasinOuvert: null,
 };
 
 /** Remet l'état à zéro à la déconnexion, sans toucher aux préférences d'affichage. */
 export function oublierSession() {
   Object.assign(etat, {
     espaceId: null, espaceNom: '', lienInvitation: '', dateMariage: '',
-    dernierMomentADeux: '', membreId: null,
+    dernierMomentADeux: '', magasins: [], membreId: null,
     membres: [], taches: [], listes: [], articles: [], depenses: [], anniversaires: [],
-    dico: new Map(), listeActiveId: null,
+    listeActiveId: null, magasinOuvert: null,
   });
 }
 

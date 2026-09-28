@@ -399,36 +399,92 @@ input,select,textarea{font-family:var(--font-ui);font-size:16px;color:inherit;}
 }
 .listes-onglets{padding-top:var(--space-3);}
 
-.rayon-titre{
+/* ── La grille des quatre magasins ──────────────────────────────────────────
+   Une vue d'ensemble : elle tient dans l'écran et ne défile pas. Ce qui
+   dépasse d'un encadré est coupé — le compte en tête dit le total, et c'est
+   en ouvrant la carte qu'on lit toute la liste. */
+.contenu-courses[data-vue="grille"]{
+  display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;
+  gap:var(--space-3);overflow:hidden;padding-top:var(--space-3);
+}
+.carte-magasin{
+  display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden;
+  background:var(--surface);border:1px solid var(--line-2);
+  border-radius:var(--radius-md);box-shadow:var(--shadow-sm);padding:var(--space-3);
+  transition:transform var(--dur-fast) var(--ease);
+}
+.carte-magasin:active{transform:scale(.985);}
+.carte-tete{display:flex;align-items:baseline;gap:var(--space-2);margin-bottom:var(--space-2);}
+.carte-titre{
+  flex:1;min-width:0;border:none;background:transparent;padding:0;text-align:left;
+  font:var(--text-overline);letter-spacing:var(--tracking-overline);
+  text-transform:uppercase;color:var(--ink-3);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.carte-compte{font:var(--text-caption);font-weight:700;color:var(--ink-4);flex-shrink:0;}
+
+.apercu{list-style:none;margin:0;padding:0;flex:1;min-height:0;overflow:hidden;position:relative;}
+.apercu li{
+  font:var(--text-sm);color:var(--ink);padding:2px 0;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.apercu li.apercu-vide{color:var(--ink-4);}
+/* Le dégradé est la seule chose qui dise « ça continue dessous » : il
+   n'apparaît qu'une fois le débordement mesuré, jamais à tort. */
+.apercu.tronque::after{
+  content:"";position:absolute;left:0;right:0;bottom:0;height:var(--space-6);
+  background:linear-gradient(to bottom,transparent,var(--surface));pointer-events:none;
+}
+
+.carte-ajout{margin-top:var(--space-2);flex-shrink:0;}
+.btn-ajout{
+  width:100%;border:1px dashed var(--line);background:transparent;color:var(--ink-3);
+  border-radius:var(--radius-sm);padding:var(--space-2);font:var(--text-sm);
+}
+.btn-ajout:active{background:var(--surface-3);}
+
+/* ── Les lignes éditables ───────────────────────────────────────────────────
+   Page d'un magasin ou liste ponctuelle : une ligne est un champ, pas un
+   libellé. On y écrit et on l'efface, rien d'autre. */
+.lignes{
+  background:var(--surface);border:1px solid var(--line-2);border-radius:var(--radius-md);
+  box-shadow:var(--shadow-sm);padding:0 var(--space-4);margin-top:var(--space-3);
+}
+.rangee{display:flex;align-items:center;border-bottom:1px solid var(--line-2);}
+.rangee:last-child{border-bottom:none;}
+.ligne-produit{
+  flex:1;min-width:0;border:none;outline:none;background:transparent;
+  font:var(--text-body);color:var(--ink);padding:var(--space-3) 0;
+}
+.ligne-produit::placeholder{color:var(--ink-4);}
+.btn-effacer{
+  flex-shrink:0;border:none;background:transparent;color:var(--ink-4);
+  font-size:20px;line-height:1;padding:var(--space-2) 0 var(--space-2) var(--space-3);
+}
+.rangee:focus-within .btn-effacer{color:var(--ink-3);}
+/* La place reste prise pour que le champ ne s'élargisse pas dès qu'on écrit. */
+.rangee.vierge .btn-effacer{visibility:hidden;}
+/* Le champ d'ajout d'un encadré, lui, se voit : il occupe la place du bouton
+   qu'il remplace et doit dire où le doigt a atterri. */
+.ligne-produit.ajout{
+  width:100%;padding:var(--space-2);font:var(--text-sm);
+  border:1px solid var(--skye-red);border-radius:var(--radius-sm);background:var(--surface);
+}
+
+/* ── Historique des listes clôturées ──────────────────────────────────────── */
+.histo-titre{
   font:var(--text-overline);letter-spacing:var(--tracking-overline);
   text-transform:uppercase;color:var(--ink-3);
   margin:var(--space-4) 0 var(--space-2) var(--space-1);
 }
-.article{
+.ligne-histo{
   display:flex;align-items:center;gap:var(--space-3);
   background:var(--surface);border:1px solid var(--line-2);border-radius:var(--radius-md);
   padding:var(--space-3);margin-bottom:var(--space-2);box-shadow:var(--shadow-sm);
 }
-.case{
-  width:22px;height:22px;border-radius:var(--radius-pill);
-  border:2px solid var(--ink-4);flex-shrink:0;background:transparent;padding:0;
-  display:flex;align-items:center;justify-content:center;
-  font-size:13px;line-height:1;color:transparent;
-  transition:background var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease);
-}
-.case:active{background:var(--success-soft);border-color:var(--success);}
-/* Cochée = « on en a ». Le vert dit la disponibilité, pas l'achèvement d'une
-   tâche : la ligne reste, elle ne se barre pas. */
-.case.on{background:var(--success);border-color:var(--success);color:var(--sur-marque);}
-.case.on::after{content:"✓";}
-/* En stock : la ligne s'efface d'un cran sans devenir illisible — sous le
-   filtre « Tout », elle reste une information consultable. */
-.est-coche{background:transparent;box-shadow:none;border-style:dashed;}
-.est-coche .nom,.est-coche .qte{color:var(--ink-3);}
-.article .nom{font:var(--text-body);font-weight:500;flex:1;min-width:0;}
-.article .qte{font:var(--text-sm);color:var(--ink-3);font-weight:600;flex-shrink:0;}
-.article .sous-ligne{display:block;font:var(--text-caption);color:var(--ink-4);margin-top:2px;}
-.article .ranger{
+.ligne-histo .nom{font:var(--text-body);font-weight:500;flex:1;min-width:0;}
+.ligne-histo .sous-ligne{display:block;font:var(--text-caption);color:var(--ink-4);margin-top:2px;}
+.ligne-histo .ranger{
   border:none;background:transparent;color:var(--ink-4);font-size:15px;
   padding:0 0 0 var(--space-2);line-height:1;flex-shrink:0;
 }
@@ -454,20 +510,6 @@ input,select,textarea{font-family:var(--font-ui);font-size:16px;color:inherit;}
 .bandeau .btn-lien{
   color:var(--skye-red);font-weight:600;text-decoration:none;
   padding:0;margin-left:auto;white-space:nowrap;
-}
-
-.addbar{
-  display:flex;align-items:center;gap:var(--space-2);
-  margin:0 var(--space-4) var(--space-3);
-  background:var(--surface);border:1px solid var(--line);
-  border-radius:var(--radius-pill);padding:var(--space-1) var(--space-1) var(--space-1) var(--space-4);
-  box-shadow:var(--shadow-md);flex-shrink:0;
-}
-.addbar input{border:none;outline:none;flex:1;background:transparent;min-width:0;}
-.addbar .mic{
-  width:36px;height:36px;border-radius:var(--radius-pill);border:none;
-  background:var(--skye-red);color:var(--sur-marque);font-size:20px;line-height:1;flex-shrink:0;
-  display:flex;align-items:center;justify-content:center;
 }
 
 /* ══════════════════ Barre d'onglets ══════════════════ */
@@ -719,7 +761,7 @@ input,select,textarea{font-family:var(--font-ui);font-size:16px;color:inherit;}
   /* `width:100%` est indispensable : sans lui, les marges automatiques font
      rétrécir ces éléments flex à la largeur de leur contenu au lieu de les
      centrer sur toute la largeur disponible. */
-  .segmented,.filtres,.addbar{max-width:900px;width:100%;margin-left:auto;margin-right:auto;}
+  .segmented,.filtres{max-width:900px;width:100%;margin-left:auto;margin-right:auto;}
   /* Sans cette limite, la flèche de retour part se coller au bord de l'écran,
      à des centaines de pixels du titre qu'elle est censée précéder. */
   .ligne-titre{max-width:900px;width:100%;margin-left:auto;margin-right:auto;}

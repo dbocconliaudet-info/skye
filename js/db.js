@@ -177,15 +177,11 @@ export const supprimerListe = async (id) =>
   ok(await sb.from('listes_courses').delete().eq('id', id));
 
 /**
- * Tous les articles des listes **actives** de l'espace, cochés ou non.
+ * Tous les articles des listes **actives** de l'espace.
  *
- * Les cochés reviennent désormais : la liste permanente est un inventaire, où
- * coché signifie « on en a » et non « acheté, terminé ».
- *
- * D'où la restriction aux listes actives, qui ne servait à rien tant qu'on ne
- * prenait que les non cochés : sans elle, chaque liste ponctuelle clôturée
- * laisserait ses articles s'accumuler dans tous les chargements à venir. Les
- * listes closes se relisent à la demande, via `articlesDeListe`.
+ * La restriction aux listes actives évite que chaque liste ponctuelle clôturée
+ * laisse ses articles s'accumuler dans tous les chargements à venir. Les listes
+ * closes se relisent à la demande, via `articlesDeListe`.
  */
 export async function chargerArticles(espaceId) {
   const lignes = ok(await sb.from('articles_courses')
@@ -201,6 +197,9 @@ export async function chargerArticles(espaceId) {
 export const ajouterArticles = async (articles) =>
   ok(await sb.from('articles_courses').insert(articles).select());
 
+export const creerArticle = async (article) =>
+  ok(await sb.from('articles_courses').insert(article).select().single());
+
 export const majArticle = async (id, patch) =>
   ok(await sb.from('articles_courses').update(patch).eq('id', id).select().single());
 
@@ -211,14 +210,9 @@ export const supprimerArticle = async (id) =>
 export const articlesDeListe = async (listeId) =>
   ok(await sb.from('articles_courses').select('*').eq('liste_id', listeId).order('cree_le'));
 
-// ── Dictionnaire de rayons appris ──────────────────────────────────────────
-
-export const chargerDico = async (espaceId) =>
-  ok(await sb.from('dictionnaire_rayons').select('mot, rayon').eq('espace_id', espaceId));
-
-export const apprendreRayon = async (espaceId, mot, rayon) =>
-  ok(await sb.from('dictionnaire_rayons')
-    .upsert({ espace_id: espaceId, mot, rayon }, { onConflict: 'espace_id,mot' }));
+// La table `dictionnaire_rayons` existe toujours en base mais n'est plus lue :
+// les rayons ont cédé la place aux quatre magasins, qui se choisissent par le
+// geste — on écrit dans un encadré — et n'ont donc rien à deviner.
 
 // ── Tricount ───────────────────────────────────────────────────────────────
 
@@ -285,7 +279,7 @@ export function abonner(espaceId, auChangement) {
   const canal = sb.channel(`espace-${espaceId}`);
 
   for (const table of ['taches', 'listes_courses', 'articles_courses', 'membres',
-    'dictionnaire_rayons', 'depenses', 'anniversaires']) {
+    'depenses', 'anniversaires']) {
     canal.on(
       'postgres_changes',
       { event: '*', schema: 'public', table, filter: `espace_id=eq.${espaceId}` },
