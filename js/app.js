@@ -13,6 +13,7 @@ import { rendreTricount, ouvrirNouvelleDepense } from './tricount.js';
 import {
   rendreAnniversaires, ouvrirNouvelAnniversaire, construireOngletsMois,
 } from './anniversaires.js';
+import { rendrePersonnel, retourPersonnel } from './personnel.js';
 
 // ══════════════════ Onboarding ══════════════════
 
@@ -268,7 +269,8 @@ async function entrerDansApp() {
 }
 
 async function rechargerDonnees() {
-  const [espace, membres, taches, listes, articles, depenses, anniversaires] =
+  const [espace, membres, taches, listes, articles, depenses, anniversaires,
+    personnels, personnelsTaux, personnelsHeures, personnelsPaiements] =
     await Promise.all([
       db.espaceParId(etat.espaceId),
       db.chargerMembres(etat.espaceId),
@@ -277,6 +279,10 @@ async function rechargerDonnees() {
       db.chargerArticles(etat.espaceId),
       db.chargerDepenses(etat.espaceId),
       db.chargerAnniversaires(etat.espaceId),
+      db.chargerPersonnels(etat.espaceId),
+      db.chargerTaux(etat.espaceId),
+      db.chargerHeures(etat.espaceId),
+      db.chargerPaiements(etat.espaceId),
     ]);
   // Relire l'espace à chaque fois évite de traîner un nom ou une date modifiés
   // depuis l'autre téléphone : ces trois champs ne passent pas par le temps réel.
@@ -293,6 +299,10 @@ async function rechargerDonnees() {
   etat.articles = articles;
   etat.depenses = depenses;
   etat.anniversaires = anniversaires;
+  etat.personnels = personnels;
+  etat.personnelsTaux = personnelsTaux;
+  etat.personnelsHeures = personnelsHeures;
+  etat.personnelsPaiements = personnelsPaiements;
   rendreTout();
 }
 
@@ -302,6 +312,7 @@ function rendreTout() {
   rendreCourses();
   rendreTricount();
   rendreAnniversaires();
+  rendrePersonnel();
 }
 
 /**
@@ -332,6 +343,7 @@ const MODULES = [
   { cle: 'courses', titre: 'Courses', icone: '🛒' },
   { cle: 'tricount', titre: 'Tricount', icone: '💶' },
   { cle: 'anniversaires', titre: 'Anniversaires', icone: '🎂' },
+  { cle: 'personnel', titre: 'Home team', icone: '🏡' },
 ];
 
 function basculerModule(nom) {
@@ -346,9 +358,11 @@ function basculerModule(nom) {
   $('#titre-module').textContent = module ? module.titre : '';
 
   if (nom === 'accueil') rendreAccueil();
-  // Courses a sa propre sous-navigation : le titre ci-dessus est celui du
-  // module, et c'est à son rendu de le remplacer par le nom du magasin ouvert.
+  // Courses et Home team ont leur propre sous-navigation : le titre ci-dessus
+  // est celui du module, et c'est à leur rendu de le remplacer par le nom du
+  // magasin ou de la personne ouverte.
   if (nom === 'courses') rendreCourses();
+  if (nom === 'personnel') rendrePersonnel();
 }
 
 // ══════════════════ Accueil ══════════════════
@@ -454,6 +468,7 @@ function brancherEvenements() {
   //   qu'une fois revenu à la grille qu'elle ramène à l'accueil.
   $('[data-action="retour-modules"]').addEventListener('click', () => {
     if (etat.module === 'courses' && retourCourses()) return;
+    if (etat.module === 'personnel' && retourPersonnel()) return;
     basculerModule('accueil');
   });
 
