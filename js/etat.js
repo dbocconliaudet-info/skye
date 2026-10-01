@@ -23,6 +23,10 @@ export const etat = {
   articles: [],
   depenses: [],
   anniversaires: [],
+  personnels: [],
+  personnelsTaux: [],
+  personnelsHeures: [],     // 24 derniers mois seulement (voir db.chargerHeures)
+  personnelsPaiements: [],
 
   // Navigation
   // 'accueil' | 'taches' | 'courses' | 'tricount' | 'anniversaires'
@@ -36,6 +40,12 @@ export const etat = {
   // des quatre encadrés. Sous-navigation interne au module Courses : c'est elle
   // qui décide où ramène la flèche de retour.
   magasinOuvert: null,
+
+  // Même principe dans « Home team » : la personne ouverte, ou null pour la
+  // liste. `lundiAffiche` est la date ISO du lundi de la semaine à l'écran.
+  personnelOuvert: null,
+  ongletPersonnel: 'calendrier',   // 'calendrier' | 'synthese'
+  lundiAffiche: '',
 };
 
 /** Remet l'état à zéro à la déconnexion, sans toucher aux préférences d'affichage. */
@@ -44,7 +54,8 @@ export function oublierSession() {
     espaceId: null, espaceNom: '', lienInvitation: '', dateMariage: '',
     dernierMomentADeux: '', magasins: [], membreId: null,
     membres: [], taches: [], listes: [], articles: [], depenses: [], anniversaires: [],
-    listeActiveId: null, magasinOuvert: null,
+    personnels: [], personnelsTaux: [], personnelsHeures: [], personnelsPaiements: [],
+    listeActiveId: null, magasinOuvert: null, personnelOuvert: null, lundiAffiche: '',
   });
 }
 
@@ -53,6 +64,8 @@ export const pseudoDe = (id) => (membreParId(id) || {}).pseudo || '';
 export const moi = () => membreParId(etat.membreId);
 /** L'autre membre de l'espace, ou null tant qu'il n'a pas rejoint. */
 export const partenaire = () => etat.membres.find((m) => m.id !== etat.membreId) || null;
+
+export const personnelParId = (id) => etat.personnels.find((p) => p.id === id) || null;
 
 export const listeParId = (id) => etat.listes.find((l) => l.id === id) || null;
 export const listePermanente = () => etat.listes.find((l) => l.type === 'permanente') || null;

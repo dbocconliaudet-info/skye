@@ -254,6 +254,16 @@
     <button class="fab" data-action="nouvel-anniversaire" aria-label="Nouvel anniversaire">+</button>
   </main>
 
+  <!-- ─────────── Module « Home team » ─────────── -->
+  <main id="vue-personnel" class="vue masque">
+    <!-- Masqués sur la liste des personnes : les onglets appartiennent à la
+         page d'une personne, pas au module. -->
+    <div id="onglets-personnel" class="filtres masque"></div>
+    <!-- `data-vue` dit lequel des trois écrans est à l'affiche : la liste des
+         personnes, le calendrier d'une semaine, ou la synthèse des mois. -->
+    <div id="contenu-personnel" class="contenu-personnel" data-vue="liste"></div>
+  </main>
+
 </div>
 
 <!-- ══════════════════ Feuille modale ══════════════════ -->

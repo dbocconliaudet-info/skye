@@ -84,8 +84,9 @@ tableau de bord Supabase → **Table Editor** → `espaces` → colonne
    les réglages d'authentification décrits juste au-dessus
 5. Recommencer avec [`supabase/schema-v3.sql`](supabase/schema-v3.sql),
    [`supabase/schema-v4.sql`](supabase/schema-v4.sql),
-   [`supabase/schema-v5.sql`](supabase/schema-v5.sql), puis
-   [`supabase/schema-v6.sql`](supabase/schema-v6.sql)
+   [`supabase/schema-v5.sql`](supabase/schema-v5.sql),
+   [`supabase/schema-v6.sql`](supabase/schema-v6.sql), puis
+   [`supabase/schema-v7.sql`](supabase/schema-v7.sql)
 
 Les scripts sont rejouables sans risque : les relancer ne détruit aucune donnée.
 Ils s'exécutent dans l'ordre — `v2` s'appuie sur les tables de `schema.sql`,
@@ -161,6 +162,7 @@ JavaScript exigent un vrai serveur (`http://`, pas `file://`).
 | `js/courses.js` | Module « Courses » : les quatre magasins et les lignes éditables |
 | `js/tricount.js` | Module « Tricount » : dépenses et solde |
 | `js/anniversaires.js` | Module « Anniversaires » |
+| `js/personnel.js` | Module « Home team » : heures, taux et paiements du personnel |
 | `js/app.js` | Démarrage, onboarding, navigation |
 | `sw.js` + `manifest.json` | Ce qui rend l'app installable |
 | `supabase/schema.sql` | Le schéma de base de données |
@@ -169,6 +171,7 @@ JavaScript exigent un vrai serveur (`http://`, pas `file://`).
 | `supabase/schema-v4.sql` | Les anniversaires |
 | `supabase/schema-v5.sql` | Le compteur « dernier moment à deux » de l'accueil |
 | `supabase/schema-v6.sql` | Les quatre magasins des Courses |
+| `supabase/schema-v7.sql` | Le personnel de maison : heures, taux, paiements |
 | `brand/` | Le kit de marque : logotype, icônes, animation de lancement |
 | `logo/` | La charte complète et le kit d'origine, pour référence |
 
@@ -227,6 +230,22 @@ JavaScript exigent un vrai serveur (`http://`, pas `file://`).
 - Vos deux anniversaires y figurent d'office, repris de la section « Nos dates »
 - Note libre par personne (idées de cadeau) et marqueur « prévoir un cadeau »,
   qui servira à trier les futures notifications
+
+**Module « Home team »**
+- Le décompte des heures de la femme de ménage et de la nounou, à deux — il
+  remplace le calendrier Excel qu'une seule personne tenait
+- Une personne, un calendrier à la semaine : une durée par jour, en menus
+  déroulants, au pas de 5 minutes
+- `—` veut dire « pas encore saisi », `0 h 00` veut dire « vérifié, elle n'est
+  pas venue » : c'est ce qui permet de voir une semaine oubliée
+- Deux boutons par semaine : *Semaine type* remplit les heures habituelles,
+  *Pas travaillé* met tout à zéro pour les vacances
+- Le **taux horaire vit en périodes datées** : une augmentation ne réécrit pas
+  les mois passés, et la suite des périodes est l'historique des augmentations
+- Synthèse mois par mois : heures, montant calculé, et le **montant réellement
+  payé** à Pajemploi ou au CESU, avec l'écart entre les deux
+- Ce n'est **pas un outil de déclaration** : le montant calculé est strictement
+  heures × taux, sans congés payés ni cotisations
 
 **Un mot à son/sa partenaire**
 - S'écrit depuis les Réglages ⚙, s'affiche à la prochaine ouverture de l'app

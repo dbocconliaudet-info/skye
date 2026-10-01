@@ -512,6 +512,106 @@ input,select,textarea{font-family:var(--font-ui);font-size:16px;color:inherit;}
   padding:0;margin-left:auto;white-space:nowrap;
 }
 
+/* ══════════════════ Module « Home team » ══════════════════ */
+
+.contenu-personnel{
+  flex:1;overflow-y:auto;padding:var(--space-3) var(--space-4) var(--space-8);
+  -webkit-overflow-scrolling:touch;
+}
+
+/* Le ⋯ des réglages d'une personne, poussé à droite des deux onglets. */
+.puce-menu{margin-left:auto;font-size:15px;line-height:1;}
+
+/* ── La liste des personnes ── */
+.carte-personne{
+  display:flex;flex-direction:column;gap:2px;width:100%;text-align:left;
+  background:var(--surface);border:1px solid var(--line-2);border-radius:var(--radius-md);
+  padding:var(--space-4);margin-bottom:var(--space-2);box-shadow:var(--shadow-sm);
+}
+.carte-personne .nom{font:var(--text-h3);letter-spacing:var(--tracking-h3);color:var(--ink);}
+.carte-personne .sous-ligne{font:var(--text-sm);color:var(--ink-3);}
+
+/* ── La semaine ── */
+.barre-semaine{
+  display:flex;align-items:center;gap:var(--space-2);margin-bottom:var(--space-3);
+}
+.barre-semaine .fleche{
+  width:var(--space-8);height:var(--space-8);flex-shrink:0;
+  border:1px solid var(--line);background:var(--surface);border-radius:var(--radius-pill);
+  color:var(--ink-2);font-size:18px;line-height:1;
+}
+.barre-semaine .fleche:active{background:var(--surface-3);}
+.barre-semaine .libelle-semaine{
+  flex:1;min-width:0;border:none;background:transparent;padding:0;
+  font:var(--text-body);font-weight:600;color:var(--ink);text-align:center;
+}
+
+.jours{
+  background:var(--surface);border:1px solid var(--line-2);border-radius:var(--radius-md);
+  box-shadow:var(--shadow-sm);padding:0 var(--space-4);
+}
+.jour{
+  display:flex;align-items:center;gap:var(--space-3);
+  border-bottom:1px solid var(--line-2);padding:var(--space-2) 0;
+}
+.jour:last-child{border-bottom:none;}
+.jour-nom{flex:1;min-width:0;font:var(--text-body);color:var(--ink);}
+/* Pas encore saisi : la ligne s'efface d'un cran, ce qui rend une semaine
+   incomplète visible d'un coup d'œil sans la rendre illisible. */
+.jour.vide .jour-nom{color:var(--ink-4);}
+.jour.aujourdhui .jour-nom{font-weight:700;}
+.jour-saisie{display:flex;align-items:center;gap:var(--space-1);flex-shrink:0;}
+.jour-saisie .sep{font:var(--text-sm);color:var(--ink-4);}
+.jour-saisie select{
+  border:1px solid var(--line);background:var(--surface);color:var(--ink);
+  border-radius:var(--radius-sm);padding:var(--space-1) var(--space-2);
+  font:var(--text-body);min-width:56px;
+}
+.jour-saisie select:disabled{color:var(--ink-4);background:var(--surface-3);}
+
+.actions-semaine{display:flex;gap:var(--space-2);margin-top:var(--space-3);}
+.actions-semaine .btn{flex:1;margin:0;}
+
+.totaux-mois{margin-top:var(--space-5);}
+.total-mois{
+  display:flex;align-items:baseline;gap:var(--space-3);
+  padding:var(--space-2) var(--space-1);border-top:1px solid var(--line-2);
+}
+.total-mois .mois{flex:1;min-width:0;font:var(--text-sm);color:var(--ink-3);
+  text-transform:capitalize;}
+.total-mois .heures{font:var(--text-body);font-weight:600;color:var(--ink);}
+.total-mois .montant{font:var(--text-body);font-weight:700;color:var(--ink);
+  min-width:84px;text-align:right;}
+
+/* ── La synthèse ── */
+.bloc-mois{
+  background:var(--surface);border:1px solid var(--line-2);border-radius:var(--radius-md);
+  box-shadow:var(--shadow-sm);padding:var(--space-4);margin-bottom:var(--space-3);
+}
+.mois-titre{
+  font:var(--text-overline);letter-spacing:var(--tracking-overline);
+  text-transform:uppercase;color:var(--ink-3);margin-bottom:var(--space-1);
+}
+.mois-calcul{font:var(--text-body);color:var(--ink);margin-bottom:var(--space-2);}
+.mois-paiement{
+  display:flex;align-items:baseline;gap:var(--space-2);width:100%;text-align:left;
+  border:none;background:var(--surface-3);border-radius:var(--radius-sm);
+  padding:var(--space-2) var(--space-3);font:var(--text-sm);color:var(--ink-2);
+}
+/* L'écart est une information, pas une alerte : il est normal, petit, et
+   permanent. Ni rouge ni vert — ce sont des couleurs de verdict. */
+.mois-paiement .ecart{margin-left:auto;font-weight:700;color:var(--ink-3);white-space:nowrap;}
+.mois-note{font:var(--text-caption);color:var(--ink-3);margin-top:var(--space-2);}
+.bloc-mois .btn{margin-bottom:0;}
+
+.ligne-taux{
+  display:flex;align-items:baseline;gap:var(--space-3);
+  padding:var(--space-2) var(--space-1);border-bottom:1px solid var(--line-2);
+}
+.ligne-taux:last-child{border-bottom:none;}
+.ligne-taux .montant{font:var(--text-body);font-weight:700;color:var(--ink);}
+.ligne-taux .periode{font:var(--text-sm);color:var(--ink-3);text-align:right;flex:1;}
+
 /* ══════════════════ Barre d'onglets ══════════════════ */
 
 /* ══════════════════ Accueil ══════════════════ */
@@ -765,7 +865,7 @@ input,select,textarea{font-family:var(--font-ui);font-size:16px;color:inherit;}
   /* Sans cette limite, la flèche de retour part se coller au bord de l'écran,
      à des centaines de pixels du titre qu'elle est censée précéder. */
   .ligne-titre{max-width:900px;width:100%;margin-left:auto;margin-right:auto;}
-  .contenu-courses{max-width:900px;margin:0 auto;width:100%;}
+  .contenu-courses,.contenu-personnel{max-width:900px;margin:0 auto;width:100%;}
   .contenu-tricount,.contenu-anniversaires{max-width:640px;margin:0 auto;width:100%;}
   .contenu-accueil{max-width:640px;margin:0 auto;width:100%;}
   /* Quatre cartes par ligne sur grand écran : à deux colonnes elles

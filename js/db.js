@@ -244,6 +244,72 @@ export const majAnniversaire = async (id, patch) =>
 export const supprimerAnniversaire = async (id) =>
   ok(await sb.from('anniversaires').delete().eq('id', id));
 
+// ── Home team (personnel de maison) ────────────────────────────────────────
+
+export const chargerPersonnels = async (espaceId) =>
+  ok(await sb.from('personnels').select('*').eq('espace_id', espaceId).order('nom'));
+
+export const creerPersonnel = async (personnel) =>
+  ok(await sb.from('personnels').insert(personnel).select().single());
+
+export const majPersonnel = async (id, patch) =>
+  ok(await sb.from('personnels').update(patch).eq('id', id).select().single());
+
+/** Les heures, les taux et les paiements partent avec, par cascade. */
+export const supprimerPersonnel = async (id) =>
+  ok(await sb.from('personnels').delete().eq('id', id));
+
+export const chargerTaux = async (espaceId) =>
+  ok(await sb.from('personnels_taux').select('*').eq('espace_id', espaceId).order('debut'));
+
+export const creerTaux = async (taux) =>
+  ok(await sb.from('personnels_taux').insert(taux).select().single());
+
+export const majTaux = async (id, patch) =>
+  ok(await sb.from('personnels_taux').update(patch).eq('id', id).select().single());
+
+export const supprimerTaux = async (id) =>
+  ok(await sb.from('personnels_taux').delete().eq('id', id));
+
+/**
+ * Les heures des 24 derniers mois seulement.
+ *
+ * Une personne produit jusqu'à 365 lignes par an, et ce chargement se rejoue
+ * en entier à chaque changement venu de l'autre téléphone. Sans borne, le coût
+ * grossirait indéfiniment pour des années que personne ne consulte. Les lignes
+ * plus anciennes restent en base, intactes.
+ */
+export async function chargerHeures(espaceId) {
+  const borne = new Date();
+  borne.setMonth(borne.getMonth() - 24, 1);
+  const depuis = `${borne.getFullYear()}-${String(borne.getMonth() + 1).padStart(2, '0')}-01`;
+  return ok(await sb.from('personnels_heures').select('*')
+    .eq('espace_id', espaceId).gte('jour', depuis).order('jour'));
+}
+
+/** Écrit une journée. L'unicité (personnel, jour) transforme un deuxième
+ *  enregistrement en mise à jour : deux téléphones sur le même jour ne créent
+ *  pas deux lignes, le dernier gagne. */
+export const enregistrerHeures = async (lignes) =>
+  ok(await sb.from('personnels_heures')
+    .upsert(lignes, { onConflict: 'personnel_id,jour' }).select());
+
+export const supprimerHeures = async (ids) =>
+  ok(await sb.from('personnels_heures').delete().in('id', ids));
+
+/** Tous les paiements, sans borne : douze lignes par an et par personne, et ce
+ *  sont justement ceux-là qu'on voudra relire longtemps après. */
+export const chargerPaiements = async (espaceId) =>
+  ok(await sb.from('personnels_paiements').select('*')
+    .eq('espace_id', espaceId).order('mois', { ascending: false }));
+
+export const enregistrerPaiement = async (paiement) =>
+  ok(await sb.from('personnels_paiements')
+    .upsert(paiement, { onConflict: 'personnel_id,mois' }).select().single());
+
+export const supprimerPaiement = async (id) =>
+  ok(await sb.from('personnels_paiements').delete().eq('id', id));
+
 // ── Mots au/à la partenaire ────────────────────────────────────────────────
 
 /** Les mots non lus qui me sont adressés. La base filtre déjà sur le
@@ -279,7 +345,8 @@ export function abonner(espaceId, auChangement) {
   const canal = sb.channel(`espace-${espaceId}`);
 
   for (const table of ['taches', 'listes_courses', 'articles_courses', 'membres',
-    'depenses', 'anniversaires']) {
+    'depenses', 'anniversaires', 'personnels', 'personnels_taux',
+    'personnels_heures', 'personnels_paiements']) {
     canal.on(
       'postgres_changes',
       { event: '*', schema: 'public', table, filter: `espace_id=eq.${espaceId}` },
