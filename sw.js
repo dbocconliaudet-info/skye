@@ -11,7 +11,7 @@
  * URL : elles, on les sert depuis le cache en priorité.
  */
 
-const VERSION = 'skye-v8';
+const VERSION = 'skye-v9';
 const COQUILLE = [
   './',
   './index.html',
