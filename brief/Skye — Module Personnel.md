@@ -54,9 +54,10 @@ Une feuille modale demande trois choses :
 
 1. **Le nom** (« Nounou Lucie », « Ménage Maria »).
 2. **Le taux horaire net** et sa **date d'effet**.
-3. **La semaine type** : sept durées, du lundi au dimanche. Elle sert
-   uniquement de modèle de remplissage (voir plus bas) ; on peut la laisser
-   vide et la régler plus tard.
+3. **La semaine type** : sept lignes début → fin, du lundi au dimanche, avec
+   la durée calculée en regard. Elle sert uniquement de modèle de remplissage
+   (voir plus bas) ; on peut la laisser vide et la régler plus tard. Un jour
+   laissé vide est un jour non travaillé.
 
 ## La page d'une personne
 
@@ -71,13 +72,13 @@ Deux onglets : **Calendrier** et **Synthèse**.
 ├────────────────────────────────┤
 │  ‹    semaine du 28 sept.    › │
 │                                │
-│  lun. 28           [3 ▾][00 ▾] │
-│  mar. 29           [2 ▾][50 ▾] │
-│  mer. 30           [— ▾][   ]  │
-│  jeu. 1er          [3 ▾][00 ▾] │
-│  ven. 2            [2 ▾][00 ▾] │
-│  sam. 3            [0 ▾][00 ▾] │
-│  dim. 4            [0 ▾][00 ▾] │
+│ lun. 28  09:00 → 12:00  3,00 h │
+│ mar. 29  16:50 → 19:40  2,83 h │
+│ mer. 30  --:-- → --:--       — │
+│ jeu. 1er 09:00 → 12:00  3,00 h │
+│ ven. 2   17:00 → 19:00  2,00 h │
+│ sam. 3   --:-- → --:--  0,00 h │
+│ dim. 4   --:-- → --:--       — │
 │                                │
 │  [Semaine type] [Pas travaillé]│
 ├────────────────────────────────┤
@@ -88,16 +89,24 @@ Deux onglets : **Calendrier** et **Synthèse**.
 
 - **Une durée par jour et par personne**, comme une case du tableau Excel. Si
   la nounou vient matin et soir, on saisit le total de la journée.
-- **Deux menus déroulants** par jour : les heures (`—`, puis 0 à 12) et les
-  minutes **de 5 en 5** (00, 05, 10 … 55). Ce sont des `<select>` natifs, donc
-  le sélecteur habituel de l'iPhone.
-- Le pas de 5 minutes, et non le quart d'heure : une journée qui se termine à
-  15 h 50 donne une durée qu'un quart d'heure ne sait pas écrire, et arrondir
-  fausserait le décompte tous les mois dans le même sens.
-- **`—` veut dire « pas encore saisi »**, et ce n'est pas la même chose que
-  `0 h 00`, qui veut dire « vérifié, elle n'est pas venue ». Cette distinction
-  est tout l'intérêt d'un calendrier de comptage : elle répond à « est-ce que
-  j'ai rempli cette semaine ? ». Choisir `—` efface la journée.
+- **On saisit une heure de début et une heure de fin**, pas une durée : c'est
+  ainsi qu'on lit une journée de travail, et ça évite de calculer 2 h 50 de
+  tête. Ce sont des `<input type="time">`, donc la roulette native de
+  l'iPhone, par pas de 5 minutes et sur les 24 heures de l'horloge — une
+  journée peut commencer à 16 h 50.
+- **La durée s'affiche en heures décimales** au bout de la ligne : 16 h 50 →
+  19 h 40 donne « 2,83 h ». C'est la forme qu'on recopie sans la convertir.
+  Le stockage reste en minutes entières : arrondir chaque journée à deux
+  décimales ferait dériver le total du mois.
+- **Une fin antérieure au début est refusée**, plutôt que comptée comme une
+  nuit : pour un ménage ou une garde, c'est une faute de frappe.
+- **Un début sans fin ne s'enregistre pas** : le geste n'est pas terminé, et
+  une journée à moitié saisie ne doit pas compter pour zéro.
+- **Deux champs vides veulent dire « pas encore saisi »**, et ce n'est pas la
+  même chose que `0,00 h`, qui veut dire « vérifié, elle n'est pas venue ».
+  Cette distinction est tout l'intérêt d'un calendrier de comptage : elle
+  répond à « est-ce que j'ai rempli cette semaine ? ». Vider les deux champs
+  efface la journée.
 - Les flèches `‹ ›` font défiler les semaines. La semaine en cours est celle
   affichée à l'ouverture.
 - **Sous le calendrier**, le total des mois que la semaine touche. Une semaine
@@ -110,8 +119,9 @@ Deux onglets : **Calendrier** et **Synthèse**.
 - **« Semaine type »** remplit les sept jours avec le modèle de la personne, y
   compris les zéros des jours non travaillés. Si la semaine contient déjà des
   saisies, une confirmation prévient avant d'écraser.
-- **« Pas travaillé »** met les sept jours à `0 h 00` — pour les vacances
-  scolaires. Même confirmation si quelque chose est déjà saisi.
+- **« Pas travaillé »** efface les horaires des sept jours et les compte
+  `0,00 h` — pour les vacances scolaires. Même confirmation si quelque chose
+  est déjà saisi.
 
 ### Onglet Synthèse
 
@@ -195,8 +205,10 @@ create table public.personnels (
   id            uuid primary key default gen_random_uuid(),
   espace_id     uuid not null references public.espaces(id) on delete cascade,
   nom           text not null,
-  -- Semaine type en minutes, du lundi au dimanche.
-  semaine_type  smallint[] not null default '{0,0,0,0,0,0,0}',
+  -- Sept entrées, du lundi au dimanche : `null` pour un jour non travaillé,
+  -- sinon {"debut": "09:00", "fin": "11:50"}.
+  semaine_type_horaires jsonb not null
+    default '[null, null, null, null, null, null, null]'::jsonb,
   cree_le       timestamptz not null default now()
 );
 
@@ -216,6 +228,10 @@ create table public.personnels_heures (
   personnel_id  uuid not null references public.personnels(id) on delete cascade,
   jour          date not null,
   minutes       smallint not null check (minutes between 0 and 1440),
+  -- Nulles ensemble ou remplies ensemble. Une journée sans horaires est une
+  -- journée posée par « Pas travaillé », ou saisie avant ce changement.
+  debut         time,
+  fin           time,
   cree_le       timestamptz not null default now(),
   unique (personnel_id, jour)
 );
@@ -270,6 +286,7 @@ consulter longtemps après — c'est tout le propos de l'archéologie.
 | Fichier | Nature |
 |---|---|
 | `supabase/schema-v7.sql` | nouveau : les quatre tables, RLS, temps réel |
+| `supabase/schema-v8.sql` | nouveau : la saisie par horaires de début et de fin |
 | `js/personnel.js` | nouveau : tout le module |
 | `index.html` | nouveau : la vue `#vue-personnel` |
 | `js/db.js` | ajouts : chargement et écriture des quatre tables, abonnement |

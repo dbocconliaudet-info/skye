@@ -85,8 +85,9 @@ tableau de bord Supabase → **Table Editor** → `espaces` → colonne
 5. Recommencer avec [`supabase/schema-v3.sql`](supabase/schema-v3.sql),
    [`supabase/schema-v4.sql`](supabase/schema-v4.sql),
    [`supabase/schema-v5.sql`](supabase/schema-v5.sql),
-   [`supabase/schema-v6.sql`](supabase/schema-v6.sql), puis
-   [`supabase/schema-v7.sql`](supabase/schema-v7.sql)
+   [`supabase/schema-v6.sql`](supabase/schema-v6.sql),
+   [`supabase/schema-v7.sql`](supabase/schema-v7.sql), puis
+   [`supabase/schema-v8.sql`](supabase/schema-v8.sql)
 
 Les scripts sont rejouables sans risque : les relancer ne détruit aucune donnée.
 Ils s'exécutent dans l'ordre — `v2` s'appuie sur les tables de `schema.sql`,
@@ -172,6 +173,7 @@ JavaScript exigent un vrai serveur (`http://`, pas `file://`).
 | `supabase/schema-v5.sql` | Le compteur « dernier moment à deux » de l'accueil |
 | `supabase/schema-v6.sql` | Les quatre magasins des Courses |
 | `supabase/schema-v7.sql` | Le personnel de maison : heures, taux, paiements |
+| `supabase/schema-v8.sql` | La saisie des heures par début et fin de journée |
 | `brand/` | Le kit de marque : logotype, icônes, animation de lancement |
 | `logo/` | La charte complète et le kit d'origine, pour référence |
 
@@ -234,10 +236,12 @@ JavaScript exigent un vrai serveur (`http://`, pas `file://`).
 **Module « Home team »**
 - Le décompte des heures de la femme de ménage et de la nounou, à deux — il
   remplace le calendrier Excel qu'une seule personne tenait
-- Une personne, un calendrier à la semaine : une durée par jour, en menus
-  déroulants, au pas de 5 minutes
-- `—` veut dire « pas encore saisi », `0 h 00` veut dire « vérifié, elle n'est
-  pas venue » : c'est ce qui permet de voir une semaine oubliée
+- Une personne, un calendrier à la semaine : on saisit une **heure de début et
+  une heure de fin** par jour, la durée se calcule et s'affiche en heures
+  décimales (16 h 50 → 19 h 40 donne « 2,83 h »)
+- Deux champs vides veulent dire « pas encore saisi », `0,00 h` veut dire
+  « vérifié, elle n'est pas venue » : c'est ce qui permet de voir une semaine
+  oubliée
 - Deux boutons par semaine : *Semaine type* remplit les heures habituelles,
   *Pas travaillé* met tout à zéro pour les vacances
 - Le **taux horaire vit en périodes datées** : une augmentation ne réécrit pas
