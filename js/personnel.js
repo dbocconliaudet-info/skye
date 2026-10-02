@@ -184,9 +184,53 @@ function moisConnus(personnelId) {
   return [...mois].sort().reverse();
 }
 
+// ══════════════════ Rendu différé pendant la saisie ══════════════════
+//
+// Le sélecteur d'heure de l'iPhone reste ouvert tant qu'on le manipule, et il
+// émet un événement par composante touchée : une fois pour les heures, une
+// fois pour les minutes. Redessiner à ce moment-là remplace le champ dans le
+// DOM, donc referme la roulette — on changeait l'heure, elle disparaissait, et
+// il fallait la rouvrir pour les minutes, comme si l'on avait validé.
+//
+// Le rendu est donc repoussé tant qu'un champ horaire a le focus. La ligne,
+// elle, se met à jour sur place (voir `ligneJour`) : on voit la durée changer
+// sans que rien ne bouge sous le doigt.
+
+let renduEnAttente = false;
+
+const saisieEnCours = () => {
+  const a = document.activeElement;
+  return Boolean(a && a.classList.contains('horaire') && $('#vue-personnel').contains(a));
+};
+
+/** Le `setTimeout` laisse le focus s'installer ailleurs avant de décider si
+ *  l'on peut redessiner sans rien interrompre. */
+function rendreSiLibre() {
+  setTimeout(() => {
+    // Le focus a pu passer d'un champ horaire à un autre : la saisie continue,
+    // et rien ne doit bouger sous le doigt.
+    if (saisieEnCours()) return;
+    // La saisie est finie : on écrit sans attendre, ce qui redessine au
+    // passage et remet les totaux à jour tout de suite.
+    viderLesEcrituresEnAttente();
+    if (renduEnAttente) rendrePersonnel();
+  }, 0);
+}
+
+let focusOutBranche = false;
+function brancherFocusOut() {
+  if (focusOutBranche) return;
+  focusOutBranche = true;
+  $('#contenu-personnel').addEventListener('focusout', rendreSiLibre);
+}
+
 // ══════════════════ Rendu ══════════════════
 
 export function rendrePersonnel() {
+  if (saisieEnCours()) { renduEnAttente = true; return; }
+  renduEnAttente = false;
+  brancherFocusOut();
+
   const hote = vider($('#contenu-personnel'));
 
   // La personne a pu être supprimée depuis l'autre téléphone pendant qu'on la
@@ -232,6 +276,8 @@ function majTitre(personne) {
  *  refermer une personne ramène à la liste, pas à l'accueil. */
 export function retourPersonnel() {
   if (etat.personnelOuvert === null) return false;
+  // Une saisie encore active bloquerait le rendu : on la termine d'abord.
+  if (saisieEnCours()) document.activeElement.blur();
   etat.personnelOuvert = null;
   etat.ongletPersonnel = 'calendrier';
   rendrePersonnel();
@@ -359,31 +405,48 @@ function ligneJour(personne, jour) {
   const saisie = heureDuJour(personne.id, jour);
   const minutes = saisie ? saisie.minutes : null;
 
+  // Une journée d'avant la saisie par horaires, ou posée par « Pas travaillé » :
+  // elle compte dans les totaux mais n'a pas d'heures à montrer. On affiche sa
+  // durée pour qu'elle ne disparaisse pas silencieusement de l'écran.
+  const sansHoraires = minutes !== null && !(saisie && saisie.debut);
+  const duree = el('span', { class: `jour-duree ${sansHoraires ? 'sans-horaires' : ''}` },
+    formaterDuree(minutes));
+
+  /** Met la ligne à jour sur place. Reconstruire la rangée remplacerait le
+   *  champ dans le DOM, et refermerait le sélecteur d'heure encore ouvert
+   *  sous le doigt. */
+  const rafraichirLigne = (lu) => {
+    const m = lu && lu !== 'incomplet' ? lu.minutes : null;
+    duree.textContent = formaterDuree(m);
+    duree.classList.remove('sans-horaires');
+    rangee.classList.toggle('vide', m === null);
+    const ecart = ecarteDuRythme(personne, jour, m === null ? null : lu);
+    rangee.classList.toggle('inhabituel', ecart);
+    if (ecart) rangee.title = 'Différent de la semaine type';
+    else rangee.removeAttribute('title');
+  };
+
   const horaires = champsHoraires(saisie && saisie.debut, saisie && saisie.fin, () => {
     const lu = horaires.lire();
     // Un début sans fin : on attend la seconde moitié plutôt que d'enregistrer
     // une journée vide. Rien à signaler, le geste n'est pas terminé.
     if (lu === 'incomplet') return;
-    if (lu === null) { effacerJour(personne, jour); return; }
-    if (lu.minutes < 0) {
+    if (lu && lu.minutes < 0) {
       toast('La fin doit venir après le début');
       rendrePersonnel();
       return;
     }
-    enregistrerJour(personne, jour, lu);
+    rafraichirLigne(lu);
+    if (lu === null) effacerJour(personne, jour);
+    else enregistrerJour(personne, jour, lu);
   });
 
   const d = depuisIso(jour);
   // « 1er » et non « 1 » : c'est la seule irrégularité du quantième français.
   const quantieme = d.getDate() === 1 ? '1er' : String(d.getDate());
-
-  // Une journée d'avant la saisie par horaires, ou posée par « Pas travaillé » :
-  // elle compte dans les totaux mais n'a pas d'heures à montrer. On affiche sa
-  // durée pour qu'elle ne disparaisse pas silencieusement de l'écran.
-  const sansHoraires = minutes !== null && !(saisie && saisie.debut);
   const inhabituel = ecarteDuRythme(personne, jour, saisie);
 
-  return el('div', {
+  const rangee = el('div', {
     class: [
       'jour',
       jour === aujourdhui() ? 'aujourdhui' : '',
@@ -394,9 +457,10 @@ function ligneJour(personne, jour) {
   },
   el('span', { class: 'jour-nom' }, `${JOURS[(d.getDay() || 7) - 1]} ${quantieme}`),
   horaires,
-  el('span', { class: `jour-duree ${sansHoraires ? 'sans-horaires' : ''}` },
-    formaterDuree(minutes)),
+  duree,
   );
+
+  return rangee;
 }
 
 // ── Écriture des heures ────────────────────────────────────────────────────
@@ -425,8 +489,51 @@ function poserLocalement(personneId, jour, { minutes, debut = null, fin = null }
   });
 }
 
-async function enregistrerJour(personne, jour, valeurs) {
-  await ecrireJours(personne, [{ jour, ...valeurs }]);
+// Le sélecteur d'heure émet un événement par composante touchée : régler
+// 16 h 50 en écrirait deux. On laisse la saisie se poser avant d'écrire, ce
+// qui ramène la salve à un seul aller-retour.
+const DELAI_ECRITURE = 600;
+const ecrituresEnAttente = new Map();
+
+/** Oublie une écriture encore en attente. Sans ça, effacer une journée — ou
+ *  appliquer la semaine type — pendant le délai la verrait réapparaître une
+ *  demi-seconde plus tard. */
+function annulerEcritures(personneId, jours) {
+  for (const jour of jours) {
+    const cle = `${personneId}|${jour}`;
+    const attente = ecrituresEnAttente.get(cle);
+    if (!attente) continue;
+    clearTimeout(attente.minuteur);
+    ecrituresEnAttente.delete(cle);
+  }
+}
+
+function enregistrerJour(personne, jour, valeurs) {
+  const cle = `${personne.id}|${jour}`;
+  const attente = ecrituresEnAttente.get(cle);
+  // L'état d'avant la première modification de la salve : c'est celui-là qu'il
+  // faudra restaurer si la base refuse, et non l'état intermédiaire.
+  const memoire = attente ? attente.memoire : memoriserHeures();
+  if (attente) clearTimeout(attente.minuteur);
+
+  // Posé tout de suite : l'écran ne doit pas attendre le minuteur.
+  poserLocalement(personne.id, jour, valeurs);
+
+  const ecrire = () => {
+    ecrituresEnAttente.delete(cle);
+    ecrireJours(personne, [{ jour, ...valeurs }], memoire);
+  };
+  ecrituresEnAttente.set(cle, { minuteur: setTimeout(ecrire, DELAI_ECRITURE), memoire, ecrire });
+}
+
+/** Écrit sans attendre le minuteur. Appelé quand la saisie se termine : il n'y
+ *  a plus de salve à regrouper, et laisser courir le délai retarderait pour
+ *  rien la mise à jour des totaux sous le calendrier. */
+function viderLesEcrituresEnAttente() {
+  const salves = [...ecrituresEnAttente.values()];
+  for (const attente of salves) clearTimeout(attente.minuteur);
+  ecrituresEnAttente.clear();
+  for (const attente of salves) attente.ecrire();
 }
 
 /**
@@ -438,8 +545,8 @@ async function enregistrerJour(personne, jour, valeurs) {
  * une redondance assumée : les totaux restent une somme d'entiers, et une
  * journée sans horaires — « elle n'est pas venue » — garde un sens.
  */
-async function ecrireJours(personne, saisies) {
-  const memoire = memoriserHeures();
+async function ecrireJours(personne, saisies, memoire = memoriserHeures()) {
+  annulerEcritures(personne.id, saisies.map((s) => s.jour));
   for (const s of saisies) poserLocalement(personne.id, s.jour, s);
   rendrePersonnel();
 
@@ -466,6 +573,7 @@ const effacerJour = (personne, jour) => effacerJours(personne, [jour]);
 /** Rend une ou plusieurs journées à l'état « pas encore saisi ». À ne pas
  *  confondre avec « Pas travaillé », qui les pose à zéro. */
 async function effacerJours(personne, jours) {
+  annulerEcritures(personne.id, jours);
   const lignes = jours.map((j) => heureDuJour(personne.id, j)).filter(Boolean);
   if (!lignes.length) { rendrePersonnel(); return; }
 

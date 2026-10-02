@@ -114,6 +114,26 @@ Deux onglets : **Calendrier** et **Synthèse**.
   le décompte se fait **jour par jour**, jamais semaine par semaine. Sans ça,
   les mois seraient faux deux fois par an.
 
+### Le sélecteur d'heure reste ouvert
+
+Sur iPhone, le sélecteur d'heure ne se referme pas entre deux réglages : il
+émet un événement par composante touchée, une fois pour les heures, une fois
+pour les minutes. Redessiner le calendrier à ce moment-là remplace le champ
+dans le DOM et **referme la roulette**, comme si l'on avait validé.
+
+Deux règles en découlent :
+
+- **Aucun rendu complet tant qu'un champ horaire a le focus.** Il est repoussé
+  jusqu'à la fin de la saisie, et rejoué au `focusout` — même mécanisme que
+  dans le module Courses, où c'était le clavier qui se refermait.
+- **La ligne se met à jour sur place** pendant ce temps : la durée et le
+  surlignage changent sans que la rangée soit reconstruite. On voit le résultat
+  sans que rien ne bouge sous le doigt.
+
+L'écriture en base est elle aussi regroupée : une salve de réglages ne produit
+qu'un seul aller-retour, et quitter le champ l'envoie sans attendre le délai
+plutôt que de laisser les totaux en retard.
+
 ### Les écarts au rythme habituel
 
 Une journée dont les horaires diffèrent de la semaine type est **surlignée en
