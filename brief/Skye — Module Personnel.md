@@ -114,7 +114,23 @@ Deux onglets : **Calendrier** et **Synthèse**.
   le décompte se fait **jour par jour**, jamais semaine par semaine. Sans ça,
   les mois seraient faux deux fois par an.
 
-### Les deux boutons de la semaine
+### Les écarts au rythme habituel
+
+Une journée dont les horaires diffèrent de la semaine type est **surlignée en
+ambre**, avec un filet sur son bord gauche. C'est là que se logent les fautes
+de frappe, et c'est ce qu'on veut repérer d'un coup d'œil en relisant un mois.
+
+- La comparaison porte sur les **horaires**, pas seulement sur la durée : venir
+  de 9 h à 12 h au lieu de 8 h à 11 h fait le même temps, mais ce n'est pas la
+  même journée.
+- Une journée **pas encore saisie** n'est pas un écart : la case vide se repère
+  autrement.
+- **Sans semaine type**, aucune ligne n'est surlignée — il n'y a rien à quoi
+  comparer, et tout surligner ne dirait rien.
+- L'ambre et non le rouge : la charte réserve le rouge à l'action, et un jour
+  inhabituel n'est pas une faute, il demande un second regard.
+
+### Les trois boutons de la semaine
 
 - **« Semaine type »** remplit les sept jours avec le modèle de la personne, y
   compris les zéros des jours non travaillés. Si la semaine contient déjà des
@@ -122,6 +138,10 @@ Deux onglets : **Calendrier** et **Synthèse**.
 - **« Pas travaillé »** efface les horaires des sept jours et les compte
   `0,00 h` — pour les vacances scolaires. Même confirmation si quelque chose
   est déjà saisi.
+- **« Réinitialiser »** rend les sept jours à l'état « pas encore saisi », et
+  non à zéro : confondre les deux ferait passer une semaine effacée par
+  mégarde pour une semaine vérifiée. Confirmation demandée, et un simple
+  message si la semaine est déjà vide.
 
 ### Onglet Synthèse
 
@@ -172,6 +192,36 @@ fois le calcul d'aujourd'hui et celui du jour du paiement s'ils diffèrent.
 
 Un paiement se **modifie et se supprime** : c'est une saisie manuelle, elle a
 le droit d'être fausse.
+
+## Onglet Export
+
+Un relevé mensuel à envoyer à la personne concernée, par WhatsApp ou autrement.
+
+- On choisit le mois, l'image se fabrique aussitôt et s'affiche en aperçu.
+- **Le relevé ne contient que des heures, jamais de montant.** Ce que l'app
+  calcule n'est pas ce que Pajemploi versera : envoyer un chiffre qui ne
+  correspondra pas au virement créerait une conversation pénible pour rien.
+- Il liste les journées réellement travaillées — ni les jours à zéro, ni les
+  jours non saisis : on y lit ce qui a été fait.
+- En pied : le nombre de jours, le total en heures décimales, et la date
+  d'établissement.
+
+### Comment l'image se fabrique et part
+
+- Elle est dessinée sur un **`<canvas>`**, trait par trait, sans bibliothèque
+  ni serveur : l'app n'a pas d'étape de build et doit marcher hors ligne.
+- Ses couleurs sont **figées en clair**, et non reprises des variables de la
+  charte : un document qui sort du foyer ne doit pas basculer en thème sombre
+  selon le réglage du téléphone qui l'a produit.
+- L'envoi passe par le **partage natif** (`navigator.share`) : sur iPhone, la
+  feuille de partage s'ouvre avec WhatsApp dedans, et la photo part en un
+  geste. Un téléchargement classique la déposerait dans « Fichiers », qu'il
+  faudrait ensuite rouvrir — quatre gestes au lieu d'un.
+- Le fichier est **préparé à l'affichage de l'aperçu**, pas au moment du clic :
+  `share()` exige d'être appelé dans le geste de l'utilisateur, et Safari
+  refuse si une attente s'est glissée entre le toucher et l'appel.
+- Sur un ordinateur, où ce partage n'existe pas, le bouton retombe sur un
+  téléchargement et change de libellé.
 
 ## Les réglages d'une personne
 

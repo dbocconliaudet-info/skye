@@ -44,8 +44,9 @@ export const etat = {
   // Même principe dans « Home team » : la personne ouverte, ou null pour la
   // liste. `lundiAffiche` est la date ISO du lundi de la semaine à l'écran.
   personnelOuvert: null,
-  ongletPersonnel: 'calendrier',   // 'calendrier' | 'synthese'
+  ongletPersonnel: 'calendrier',   // 'calendrier' | 'synthese' | 'export'
   lundiAffiche: '',
+  moisExport: '',                  // 'AAAA-MM' du relevé à envoyer
 };
 
 /** Remet l'état à zéro à la déconnexion, sans toucher aux préférences d'affichage. */
@@ -55,7 +56,8 @@ export function oublierSession() {
     dernierMomentADeux: '', magasins: [], membreId: null,
     membres: [], taches: [], listes: [], articles: [], depenses: [], anniversaires: [],
     personnels: [], personnelsTaux: [], personnelsHeures: [], personnelsPaiements: [],
-    listeActiveId: null, magasinOuvert: null, personnelOuvert: null, lundiAffiche: '',
+    listeActiveId: null, magasinOuvert: null, personnelOuvert: null,
+    lundiAffiche: '', moisExport: '',
   });
 }
 
