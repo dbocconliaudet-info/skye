@@ -15,12 +15,6 @@ import { formaterMontant, enCentimes } from './tricount.js';
 import * as db from './db.js';
 
 const JOURS = ['lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.', 'dim.'];
-const HEURES_MAX = 12;
-
-// Le pas de 5 minutes, et non le quart d'heure : une journée qui se termine à
-// 15 h 50 donne une durée que le quart d'heure ne sait pas écrire, et arrondir
-// fausserait le décompte tous les mois dans le même sens.
-const PAS_MINUTES = 5;
 
 // ══════════════════ Dates ══════════════════
 
@@ -62,12 +56,70 @@ function dateAvecAnnee(iso) {
   return d.getDate() === 1 ? texte.replace(/^1 /, '1er ') : texte;
 }
 
-/** `null` n'est pas zéro : il veut dire « pas encore saisi », quand 0 h 00 veut
- *  dire « vérifié, elle n'est pas venue ». Toute l'utilité d'un calendrier de
- *  comptage tient dans cette différence. */
+// ══════════════════ Durées et horaires ══════════════════
+
+const fmtDecimal = new Intl.NumberFormat('fr-FR', {
+  minimumFractionDigits: 2, maximumFractionDigits: 2,
+});
+
+/**
+ * Une durée en heures décimales : 2 h 50 s'affiche « 2,83 h ».
+ *
+ * C'est la forme sous laquelle on recopie des heures sans avoir à les
+ * convertir. Le stockage, lui, reste en minutes entières : arrondir à deux
+ * décimales sur chaque journée ferait dériver le total du mois.
+ *
+ * `null` n'est pas zéro : il veut dire « pas encore saisi », quand 0,00 h veut
+ * dire « vérifié, elle n'est pas venue ». Toute l'utilité d'un calendrier de
+ * comptage tient dans cette différence.
+ */
 const formaterDuree = (minutes) => (minutes === null || minutes === undefined
   ? '—'
-  : `${Math.floor(minutes / 60)} h ${String(minutes % 60).padStart(2, '0')}`);
+  : `${fmtDecimal.format(minutes / 60)} h`);
+
+/** « 16:50 » → 1010. Le format des `<input type="time">`, qui couvrent
+ *  l'horloge entière : la borne à 12 h n'avait de sens que pour une durée. */
+function minutesDeLHeure(texte) {
+  const [h, m] = String(texte || '').split(':').map(Number);
+  if (!Number.isFinite(h) || !Number.isFinite(m)) return null;
+  return h * 60 + m;
+}
+
+/**
+ * Les deux champs d'une journée : heure de début, heure de fin.
+ *
+ * `lire()` rend `{ debut, fin, minutes }`, `null` si les deux sont vides, et
+ * `'incomplet'` si une seule l'est — un début sans fin ne veut rien dire et ne
+ * doit surtout pas s'enregistrer comme une journée de zéro heure.
+ */
+function champsHoraires(debut, fin, auChangement) {
+  const champ = (valeur, etiquette) => el('input', {
+    // `step` à 300 secondes : la roulette avance de 5 en 5 minutes, comme les
+    // anciens menus. Elle couvre en revanche les 24 heures de l'horloge.
+    type: 'time', step: 300, class: 'horaire', value: valeur || '',
+    'aria-label': etiquette,
+  });
+  const chDebut = champ(debut, 'Heure de début');
+  const chFin = champ(fin, 'Heure de fin');
+
+  const boite = el('span', { class: 'horaires' },
+    chDebut, el('span', { class: 'sep' }, '→'), chFin);
+
+  boite.lire = () => {
+    if (!chDebut.value && !chFin.value) return null;
+    if (!chDebut.value || !chFin.value) return 'incomplet';
+    const d = minutesDeLHeure(chDebut.value);
+    const f = minutesDeLHeure(chFin.value);
+    if (d === null || f === null) return 'incomplet';
+    return { debut: chDebut.value, fin: chFin.value, minutes: f - d };
+  };
+
+  if (auChangement) {
+    chDebut.addEventListener('change', auChangement);
+    chFin.addEventListener('change', auChangement);
+  }
+  return boite;
+}
 
 // ══════════════════ Lecture des données ══════════════════
 
@@ -287,42 +339,36 @@ function ligneJour(personne, jour) {
   const saisie = heureDuJour(personne.id, jour);
   const minutes = saisie ? saisie.minutes : null;
 
-  const selH = el('select', { class: 'sel-h', 'aria-label': `Heures du ${jour}` });
-  selH.append(el('option', { value: '' }, '—'));
-  for (let h = 0; h <= HEURES_MAX; h += 1) {
-    selH.append(el('option', { value: String(h) }, String(h)));
-  }
-
-  const selM = el('select', { class: 'sel-m', 'aria-label': `Minutes du ${jour}` });
-  for (let m = 0; m < 60; m += PAS_MINUTES) {
-    selM.append(el('option', { value: String(m) }, String(m).padStart(2, '0')));
-  }
-  // Une valeur héritée hors du pas de 5 doit rester lisible, plutôt que de
-  // faire apparaître un menu vide et de se perdre au premier enregistrement.
-  if (minutes !== null && minutes % PAS_MINUTES) {
-    const reste = minutes % 60;
-    selM.append(el('option', { value: String(reste) }, String(reste).padStart(2, '0')));
-  }
-
-  selH.value = minutes === null ? '' : String(Math.min(HEURES_MAX, Math.floor(minutes / 60)));
-  selM.value = minutes === null ? '0' : String(minutes % 60);
-  selM.disabled = minutes === null;
-
-  const ecrire = () => {
-    if (selH.value === '') { effacerJour(personne, jour); return; }
-    enregistrerJour(personne, jour, Number(selH.value) * 60 + Number(selM.value));
-  };
-  selH.addEventListener('change', ecrire);
-  selM.addEventListener('change', ecrire);
+  const horaires = champsHoraires(saisie && saisie.debut, saisie && saisie.fin, () => {
+    const lu = horaires.lire();
+    // Un début sans fin : on attend la seconde moitié plutôt que d'enregistrer
+    // une journée vide. Rien à signaler, le geste n'est pas terminé.
+    if (lu === 'incomplet') return;
+    if (lu === null) { effacerJour(personne, jour); return; }
+    if (lu.minutes < 0) {
+      toast('La fin doit venir après le début');
+      rendrePersonnel();
+      return;
+    }
+    enregistrerJour(personne, jour, lu);
+  });
 
   const d = depuisIso(jour);
   // « 1er » et non « 1 » : c'est la seule irrégularité du quantième français.
   const quantieme = d.getDate() === 1 ? '1er' : String(d.getDate());
+
+  // Une journée d'avant la saisie par horaires, ou posée par « Pas travaillé » :
+  // elle compte dans les totaux mais n'a pas d'heures à montrer. On affiche sa
+  // durée pour qu'elle ne disparaisse pas silencieusement de l'écran.
+  const sansHoraires = minutes !== null && !(saisie && saisie.debut);
+
   return el('div', {
     class: `jour ${jour === aujourdhui() ? 'aujourdhui' : ''} ${minutes === null ? 'vide' : ''}`,
   },
   el('span', { class: 'jour-nom' }, `${JOURS[(d.getDay() || 7) - 1]} ${quantieme}`),
-  el('span', { class: 'jour-saisie' }, selH, el('span', { class: 'sep' }, 'h'), selM),
+  horaires,
+  el('span', { class: `jour-duree ${sansHoraires ? 'sans-horaires' : ''}` },
+    formaterDuree(minutes)),
   );
 }
 
@@ -343,30 +389,41 @@ function remplacerHeures(lignes) {
   }
 }
 
-function poserLocalement(personneId, jour, minutes) {
+function poserLocalement(personneId, jour, { minutes, debut = null, fin = null }) {
   const existant = heureDuJour(personneId, jour);
-  if (existant) { existant.minutes = minutes; return; }
+  if (existant) { Object.assign(existant, { minutes, debut, fin }); return; }
   etat.personnelsHeures.push({
     id: `provisoire-${personneId}-${jour}`,
-    espace_id: etat.espaceId, personnel_id: personneId, jour, minutes,
+    espace_id: etat.espaceId, personnel_id: personneId, jour, minutes, debut, fin,
   });
 }
 
-async function enregistrerJour(personne, jour, minutes) {
-  await ecrireJours(personne, [{ jour, minutes }]);
+async function enregistrerJour(personne, jour, valeurs) {
+  await ecrireJours(personne, [{ jour, ...valeurs }]);
 }
 
-/** Écrit une ou plusieurs journées d'un coup. L'écran est mis à jour avant la
- *  réponse de la base : saisir sept jours de suite ne doit pas donner
- *  l'impression de ramer. */
+/**
+ * Écrit une ou plusieurs journées d'un coup. L'écran est mis à jour avant la
+ * réponse de la base : saisir sept jours de suite ne doit pas donner
+ * l'impression de ramer.
+ *
+ * `minutes` part en base à côté des horaires bien qu'elle s'en déduise. C'est
+ * une redondance assumée : les totaux restent une somme d'entiers, et une
+ * journée sans horaires — « elle n'est pas venue » — garde un sens.
+ */
 async function ecrireJours(personne, saisies) {
   const memoire = memoriserHeures();
-  for (const { jour, minutes } of saisies) poserLocalement(personne.id, jour, minutes);
+  for (const s of saisies) poserLocalement(personne.id, s.jour, s);
   rendrePersonnel();
 
   try {
-    const lignes = await db.enregistrerHeures(saisies.map(({ jour, minutes }) => ({
-      espace_id: etat.espaceId, personnel_id: personne.id, jour, minutes,
+    const lignes = await db.enregistrerHeures(saisies.map((s) => ({
+      espace_id: etat.espaceId,
+      personnel_id: personne.id,
+      jour: s.jour,
+      minutes: s.minutes,
+      debut: s.debut || null,
+      fin: s.fin || null,
     })));
     remplacerHeures(lignes);
     rendrePersonnel();
@@ -398,26 +455,41 @@ async function effacerJour(personne, jour) {
   }
 }
 
+/** La semaine type, sept entrées du lundi au dimanche : `null` pour un jour non
+ *  travaillé, `{ debut, fin }` sinon. */
+const semaineTypeDe = (personne) => {
+  const brut = personne.semaine_type_horaires;
+  return Array.isArray(brut) ? brut : [];
+};
+
 async function appliquerSemaineType(personne, jours) {
-  const modele = personne.semaine_type || [];
-  if (!modele.some((m) => m > 0)) {
+  const modele = semaineTypeDe(personne);
+  if (!modele.some(Boolean)) {
     toast('Réglez d’abord la semaine type dans ⋯');
     return;
   }
   if (jours.some((j) => heureDuJour(personne.id, j))) {
     const oui = await confirmer('Remplacer cette semaine ?', {
-      detail: 'Les heures déjà saisies seront écrasées par la semaine type.',
+      detail: 'Les horaires déjà saisis seront écrasés par la semaine type.',
       texteOk: 'Remplacer',
     });
     if (!oui) return;
   }
-  await ecrireJours(personne, jours.map((jour, i) => ({ jour, minutes: modele[i] || 0 })));
+
+  await ecrireJours(personne, jours.map((jour, i) => {
+    const type = modele[i];
+    // Un jour non travaillé dans le modèle devient un zéro explicite, et non
+    // une case vide : appliquer la semaine type vaut vérification.
+    if (!type || !type.debut || !type.fin) return { jour, minutes: 0 };
+    const minutes = minutesDeLHeure(type.fin) - minutesDeLHeure(type.debut);
+    return { jour, minutes: Math.max(0, minutes), debut: type.debut, fin: type.fin };
+  }));
 }
 
 async function marquerNonTravaillee(personne, jours) {
   if (jours.some((j) => (heureDuJour(personne.id, j) || {}).minutes)) {
     const oui = await confirmer('Mettre la semaine à zéro ?', {
-      detail: 'Les heures saisies cette semaine-là seront remplacées par 0 h 00.',
+      detail: 'Les horaires saisis cette semaine-là seront effacés et la semaine comptera 0,00 h.',
       texteOk: 'Mettre à zéro',
     });
     if (!oui) return;
@@ -574,36 +646,50 @@ function ouvrirPaiement(personne, mois, centsCalcules, existant) {
 
 // ── Créer et régler une personne ───────────────────────────────────────────
 
-/** Les sept menus de la semaine type. L'élément renvoyé porte `lire()`, qui
- *  rend les durées en minutes, du lundi au dimanche. */
+/**
+ * Les sept lignes de la semaine type, en heures de début et de fin.
+ *
+ * `lire()` rend un tableau de sept entrées, du lundi au dimanche : `null` pour
+ * un jour non travaillé, `{ debut, fin }` sinon. `valide()` signale une ligne
+ * à moitié remplie ou une fin antérieure au début.
+ */
 function champsSemaineType(valeurs) {
   const boite = el('div', { class: 'jours' });
-  const menus = [];
+  const lignes = [];
 
   for (let i = 0; i < 7; i += 1) {
-    const minutes = valeurs[i] || 0;
-    const selH = el('select', { class: 'sel-h', 'aria-label': `Heures du ${JOURS[i]}` });
-    for (let h = 0; h <= HEURES_MAX; h += 1) {
-      selH.append(el('option', { value: String(h) }, String(h)));
-    }
-    const selM = el('select', { class: 'sel-m', 'aria-label': `Minutes du ${JOURS[i]}` });
-    for (let m = 0; m < 60; m += PAS_MINUTES) {
-      selM.append(el('option', { value: String(m) }, String(m).padStart(2, '0')));
-    }
-    if (minutes % PAS_MINUTES) {
-      const reste = minutes % 60;
-      selM.append(el('option', { value: String(reste) }, String(reste).padStart(2, '0')));
-    }
-    selH.value = String(Math.min(HEURES_MAX, Math.floor(minutes / 60)));
-    selM.value = String(minutes % 60);
-    menus.push([selH, selM]);
+    const type = (valeurs && valeurs[i]) || null;
+    const duree = el('span', { class: 'jour-duree' });
 
+    const horaires = champsHoraires(type && type.debut, type && type.fin, () => {
+      const lu = horaires.lire();
+      duree.textContent = lu && lu !== 'incomplet' && lu.minutes >= 0
+        ? formaterDuree(lu.minutes)
+        : '';
+    });
+
+    const lu = horaires.lire();
+    duree.textContent = lu && lu !== 'incomplet' && lu.minutes >= 0
+      ? formaterDuree(lu.minutes) : '';
+
+    lignes.push(horaires);
     boite.append(el('div', { class: 'jour' },
       el('span', { class: 'jour-nom' }, JOURS[i]),
-      el('span', { class: 'jour-saisie' }, selH, el('span', { class: 'sep' }, 'h'), selM)));
+      horaires,
+      duree));
   }
 
-  boite.lire = () => menus.map(([h, m]) => Number(h.value) * 60 + Number(m.value));
+  boite.lire = () => lignes.map((h) => {
+    const lu = h.lire();
+    if (!lu || lu === 'incomplet' || lu.minutes < 0) return null;
+    return { debut: lu.debut, fin: lu.fin };
+  });
+
+  boite.valide = () => lignes.every((h) => {
+    const lu = h.lire();
+    return lu === null || (lu !== 'incomplet' && lu.minutes >= 0);
+  });
+
   return boite;
 }
 
@@ -622,10 +708,15 @@ function ouvrirNouvellePersonne() {
     const cents = enCentimes(taux.value);
     if (!Number.isFinite(cents) || cents <= 0) { toast('Taux horaire illisible'); taux.focus(); return; }
     if (!debut.value) { toast('Donnez la date d’effet du taux'); return; }
+    if (!semaine.valide()) {
+      toast('Semaine type : chaque jour veut un début et une fin, dans cet ordre');
+      return;
+    }
 
     try {
       const personne = await db.creerPersonnel({
-        espace_id: etat.espaceId, nom: valeurNom, semaine_type: semaine.lire(),
+        espace_id: etat.espaceId, nom: valeurNom,
+        semaine_type_horaires: semaine.lire(),
       });
       etat.personnels.push(personne);
       const periode = await db.creerTaux({
@@ -704,11 +795,16 @@ function ouvrirRenommer(personne) {
 }
 
 function ouvrirSemaineType(personne) {
-  const semaine = champsSemaineType(personne.semaine_type || []);
+  const semaine = champsSemaineType(semaineTypeDe(personne));
 
   const enregistrer = async () => {
+    if (!semaine.valide()) {
+      toast('Chaque jour veut un début et une fin, dans cet ordre');
+      return;
+    }
     try {
-      const maj = await db.majPersonnel(personne.id, { semaine_type: semaine.lire() });
+      const maj = await db.majPersonnel(personne.id,
+        { semaine_type_horaires: semaine.lire() });
       remplacerPersonne(maj);
       fermerFeuille();
       rendrePersonnel();

@@ -551,23 +551,40 @@ input,select,textarea{font-family:var(--font-ui);font-size:16px;color:inherit;}
   box-shadow:var(--shadow-sm);padding:0 var(--space-4);
 }
 .jour{
-  display:flex;align-items:center;gap:var(--space-3);
+  display:flex;align-items:center;gap:var(--space-2);
   border-bottom:1px solid var(--line-2);padding:var(--space-2) 0;
 }
 .jour:last-child{border-bottom:none;}
-.jour-nom{flex:1;min-width:0;font:var(--text-body);color:var(--ink);}
+.jour-nom{width:60px;flex-shrink:0;font:var(--text-sm);color:var(--ink);}
 /* Pas encore saisi : la ligne s'efface d'un cran, ce qui rend une semaine
    incomplète visible d'un coup d'œil sans la rendre illisible. */
 .jour.vide .jour-nom{color:var(--ink-4);}
 .jour.aujourdhui .jour-nom{font-weight:700;}
-.jour-saisie{display:flex;align-items:center;gap:var(--space-1);flex-shrink:0;}
-.jour-saisie .sep{font:var(--text-sm);color:var(--ink-4);}
-.jour-saisie select{
+
+.horaires{display:flex;align-items:center;gap:var(--space-1);flex:1;min-width:0;}
+.horaires .sep{font:var(--text-sm);color:var(--ink-4);flex-shrink:0;}
+.horaire{
+  flex:1;min-width:0;
   border:1px solid var(--line);background:var(--surface);color:var(--ink);
-  border-radius:var(--radius-sm);padding:var(--space-1) var(--space-2);
-  font:var(--text-body);min-width:56px;
+  border-radius:var(--radius-sm);padding:var(--space-1) var(--space-1);
+  font:var(--text-sm);text-align:center;
 }
-.jour-saisie select:disabled{color:var(--ink-4);background:var(--surface-3);}
+/* L'icône d'horloge que Chrome ajoute à droite du champ vole une vingtaine de
+   pixels et tronque « 09:00 » en « 09:C » sur un écran de téléphone. iOS ne
+   l'affiche pas, et toucher le champ y ouvre la roulette de toute façon. */
+.horaire::-webkit-calendar-picker-indicator{display:none;}
+/* Safari pose son propre alignement sur la valeur : sans ça, les deux champs
+   d'une même ligne ne se ressemblent pas. */
+.horaire::-webkit-date-and-time-value{text-align:center;margin:0;}
+
+.jour-duree{
+  width:56px;flex-shrink:0;text-align:right;
+  font:var(--text-sm);font-weight:600;color:var(--ink);
+}
+/* Journée comptée mais sans horaires : d'avant la saisie par début/fin, ou
+   posée par « Pas travaillé ». Elle compte dans les totaux, et le dire d'un
+   ton plus bas vaut mieux que de la laisser passer pour une ligne vide. */
+.jour-duree.sans-horaires{color:var(--ink-4);font-style:italic;}
 
 .actions-semaine{display:flex;gap:var(--space-2);margin-top:var(--space-3);}
 .actions-semaine .btn{flex:1;margin:0;}
