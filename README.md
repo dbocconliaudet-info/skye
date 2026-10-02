@@ -242,8 +242,14 @@ JavaScript exigent un vrai serveur (`http://`, pas `file://`).
 - Deux champs vides veulent dire « pas encore saisi », `0,00 h` veut dire
   « vérifié, elle n'est pas venue » : c'est ce qui permet de voir une semaine
   oubliée
-- Deux boutons par semaine : *Semaine type* remplit les heures habituelles,
-  *Pas travaillé* met tout à zéro pour les vacances
+- Trois boutons par semaine : *Semaine type* remplit les heures habituelles,
+  *Pas travaillé* met tout à zéro pour les vacances, *Réinitialiser* rend la
+  semaine vierge
+- Une journée dont les horaires s'écartent de la semaine type est **surlignée
+  en ambre** : c'est là que se logent les fautes de frappe
+- Un onglet **Export** fabrique le relevé du mois en image et l'envoie par la
+  feuille de partage de l'iPhone — WhatsApp y figure. Le relevé ne contient
+  que des heures, jamais de montant
 - Le **taux horaire vit en périodes datées** : une augmentation ne réécrit pas
   les mois passés, et la suite des périodes est l'historique des augmentations
 - Synthèse mois par mois : heures, montant calculé, et le **montant réellement

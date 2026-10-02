@@ -586,8 +586,35 @@ input,select,textarea{font-family:var(--font-ui);font-size:16px;color:inherit;}
    ton plus bas vaut mieux que de la laisser passer pour une ligne vide. */
 .jour-duree.sans-horaires{color:var(--ink-4);font-style:italic;}
 
-.actions-semaine{display:flex;gap:var(--space-2);margin-top:var(--space-3);}
-.actions-semaine .btn{flex:1;margin:0;}
+/* Journée différente de la semaine type. L'ambre et non le rouge : la charte
+   réserve le rouge à l'action, et un jour inhabituel n'est pas une faute — il
+   demande juste un second regard. */
+.jour.inhabituel{
+  background:var(--warning-soft);
+  box-shadow:inset 3px 0 0 var(--warning);
+  margin:0 calc(var(--space-4) * -1);padding-left:var(--space-4);padding-right:var(--space-4);
+}
+
+.actions-semaine{
+  display:flex;gap:var(--space-2);margin-top:var(--space-3);
+}
+.actions-semaine .btn{
+  flex:1;margin:0;min-width:0;padding-left:var(--space-2);padding-right:var(--space-2);
+  font:var(--text-sm);font-weight:600;white-space:nowrap;
+}
+
+/* ── Onglet Export ── */
+.choix-mois{
+  width:100%;border:1px solid var(--line);background:var(--surface);color:var(--ink);
+  border-radius:var(--radius-sm);padding:var(--space-3);font:var(--text-body);
+}
+.apercu-releve{
+  margin:var(--space-4) 0;border:1px solid var(--line-2);border-radius:var(--radius-md);
+  overflow:hidden;background:#FFFFFF;min-height:var(--space-24);
+}
+/* Le relevé est un document qui sort du foyer : il reste blanc même si le
+   téléphone qui l'a produit est en thème sombre. */
+.releve{display:block;width:100%;height:auto;}
 
 .totaux-mois{margin-top:var(--space-5);}
 .total-mois{

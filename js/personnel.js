@@ -77,6 +77,16 @@ const formaterDuree = (minutes) => (minutes === null || minutes === undefined
   ? '—'
   : `${fmtDecimal.format(minutes / 60)} h`);
 
+/**
+ * « 09:00:00 » → « 09:00 ».
+ *
+ * Postgres rend ses colonnes `time` avec les secondes. Un `<input type="time">`
+ * dont le pas est de 5 minutes refuse cette précision et reste vide : la
+ * journée passerait pour non saisie alors qu'elle l'est. Tout ce qui vient de
+ * la base passe donc par ici.
+ */
+const hhmm = (valeur) => String(valeur || '').slice(0, 5);
+
 /** « 16:50 » → 1010. Le format des `<input type="time">`, qui couvrent
  *  l'horloge entière : la borne à 12 h n'avait de sens que pour une durée. */
 function minutesDeLHeure(texte) {
@@ -96,7 +106,7 @@ function champsHoraires(debut, fin, auChangement) {
   const champ = (valeur, etiquette) => el('input', {
     // `step` à 300 secondes : la roulette avance de 5 en 5 minutes, comme les
     // anciens menus. Elle couvre en revanche les 24 heures de l'horloge.
-    type: 'time', step: 300, class: 'horaire', value: valeur || '',
+    type: 'time', step: 300, class: 'horaire', value: hhmm(valeur),
     'aria-label': etiquette,
   });
   const chDebut = champ(debut, 'Heure de début');
@@ -201,6 +211,11 @@ export function rendrePersonnel() {
     rendreSynthese(hote, personne);
     return;
   }
+  if (etat.ongletPersonnel === 'export') {
+    hote.dataset.vue = 'export';
+    rendreExport(hote, personne);
+    return;
+  }
   hote.dataset.vue = 'calendrier';
   rendreCalendrier(hote, personne);
 }
@@ -225,7 +240,9 @@ export function retourPersonnel() {
 
 function rendreOnglets(personne) {
   const hote = vider($('#onglets-personnel'));
-  for (const [cle, libelle] of [['calendrier', 'Calendrier'], ['synthese', 'Synthèse']]) {
+  for (const [cle, libelle] of [
+    ['calendrier', 'Calendrier'], ['synthese', 'Synthèse'], ['export', 'Export'],
+  ]) {
     hote.append(el('button', {
       class: `puce ${etat.ongletPersonnel === cle ? 'on' : ''}`,
       onclick: () => { etat.ongletPersonnel = cle; rendrePersonnel(); },
@@ -318,6 +335,9 @@ function rendreCalendrier(hote, personne) {
     el('button', {
       class: 'btn btn-secondaire', onclick: () => marquerNonTravaillee(personne, jours),
     }, 'Pas travaillé'),
+    el('button', {
+      class: 'btn btn-secondaire', onclick: () => reinitialiserSemaine(personne, jours),
+    }, 'Réinitialiser'),
   ));
 
   // Les mois que la semaine touche. Une semaine à cheval en affiche deux : le
@@ -361,9 +381,16 @@ function ligneJour(personne, jour) {
   // elle compte dans les totaux mais n'a pas d'heures à montrer. On affiche sa
   // durée pour qu'elle ne disparaisse pas silencieusement de l'écran.
   const sansHoraires = minutes !== null && !(saisie && saisie.debut);
+  const inhabituel = ecarteDuRythme(personne, jour, saisie);
 
   return el('div', {
-    class: `jour ${jour === aujourdhui() ? 'aujourdhui' : ''} ${minutes === null ? 'vide' : ''}`,
+    class: [
+      'jour',
+      jour === aujourdhui() ? 'aujourdhui' : '',
+      minutes === null ? 'vide' : '',
+      inhabituel ? 'inhabituel' : '',
+    ].filter(Boolean).join(' '),
+    title: inhabituel ? 'Différent de la semaine type' : null,
   },
   el('span', { class: 'jour-nom' }, `${JOURS[(d.getDay() || 7) - 1]} ${quantieme}`),
   horaires,
@@ -434,25 +461,49 @@ async function ecrireJours(personne, saisies) {
   }
 }
 
-async function effacerJour(personne, jour) {
-  const existant = heureDuJour(personne.id, jour);
-  if (!existant) { rendrePersonnel(); return; }
+const effacerJour = (personne, jour) => effacerJours(personne, [jour]);
+
+/** Rend une ou plusieurs journées à l'état « pas encore saisi ». À ne pas
+ *  confondre avec « Pas travaillé », qui les pose à zéro. */
+async function effacerJours(personne, jours) {
+  const lignes = jours.map((j) => heureDuJour(personne.id, j)).filter(Boolean);
+  if (!lignes.length) { rendrePersonnel(); return; }
 
   const memoire = memoriserHeures();
-  const { id } = existant;
-  etat.personnelsHeures = etat.personnelsHeures.filter((h) => h !== existant);
-  rendrePersonnel();
-
   // Une ligne encore provisoire n'existe pas en base : rien à y supprimer.
-  if (String(id).startsWith('provisoire-')) return;
+  const ids = lignes.map((l) => l.id).filter((id) => !String(id).startsWith('provisoire-'));
+  etat.personnelsHeures = etat.personnelsHeures.filter((h) => !lignes.includes(h));
+  rendrePersonnel();
+  if (!ids.length) return;
 
   try {
-    await db.supprimerHeures([id]);
+    await db.supprimerHeures(ids);
   } catch (e) {
     etat.personnelsHeures = memoire;
     rendrePersonnel();
     toast(`Suppression impossible : ${e.message}`);
   }
+}
+
+/**
+ * Vide la semaine affichée.
+ *
+ * Les journées redeviennent « pas encore saisies », et non « zéro heure » : le
+ * bouton voisin « Pas travaillé » sert à cela, et confondre les deux ferait
+ * passer une semaine effacée par mégarde pour une semaine vérifiée.
+ */
+async function reinitialiserSemaine(personne, jours) {
+  const saisies = jours.filter((j) => heureDuJour(personne.id, j));
+  if (!saisies.length) { toast('Cette semaine est déjà vide'); return; }
+
+  const oui = await confirmer('Réinitialiser cette semaine ?', {
+    detail: `${saisies.length} journée${saisies.length > 1 ? 's' : ''} `
+      + `redevien${saisies.length > 1 ? 'nent' : 't'} vierge${saisies.length > 1 ? 's' : ''} : `
+      + 'ni horaires, ni zéro. Le total du mois est recalculé.',
+    texteOk: 'Réinitialiser', danger: true,
+  });
+  if (!oui) return;
+  await effacerJours(personne, saisies);
 }
 
 /** La semaine type, sept entrées du lundi au dimanche : `null` pour un jour non
@@ -461,6 +512,35 @@ const semaineTypeDe = (personne) => {
   const brut = personne.semaine_type_horaires;
   return Array.isArray(brut) ? brut : [];
 };
+
+/** L'entrée de la semaine type qui correspond à une date. */
+const typeDuJour = (personne, jour) =>
+  semaineTypeDe(personne)[(depuisIso(jour).getDay() || 7) - 1] || null;
+
+/**
+ * La journée s'écarte-t-elle du rythme habituel ?
+ *
+ * Sert à signaler les jours inhabituels, qui sont aussi là où se logent les
+ * fautes de frappe. On compare les horaires et non la seule durée : venir de
+ * 9 h à 12 h au lieu de 8 h à 11 h fait le même temps, mais ce n'est pas la
+ * même journée, et c'est exactement le genre d'erreur qu'on veut voir.
+ *
+ * Une journée pas encore saisie n'est pas un écart — c'est une case vide, elle
+ * se repère autrement. Sans semaine type, il n'y a rien à comparer : on ne
+ * surligne alors aucune ligne plutôt que de les surligner toutes.
+ */
+function ecarteDuRythme(personne, jour, saisie) {
+  if (!saisie) return false;
+  const modele = semaineTypeDe(personne);
+  if (!modele.some(Boolean)) return false;
+
+  const type = typeDuJour(personne, jour);
+  // Jour normalement chômé : toute heure travaillée est un écart.
+  if (!type || !type.debut || !type.fin) return saisie.minutes > 0;
+  // Jour normalement travaillé, mais posé sans horaires (« Pas travaillé »).
+  if (!saisie.debut || !saisie.fin) return true;
+  return hhmm(saisie.debut) !== hhmm(type.debut) || hhmm(saisie.fin) !== hhmm(type.fin);
+}
 
 async function appliquerSemaineType(personne, jours) {
   const modele = semaineTypeDe(personne);
@@ -642,6 +722,225 @@ function ouvrirPaiement(personne, mois, centsCalcules, existant) {
       : null,
     el('button', { class: 'btn btn-fantome', onclick: fermerFeuille }, 'Annuler'),
   ));
+}
+
+// ══════════════════ Onglet Export ══════════════════
+//
+// Le relevé part à la personne concernée, par WhatsApp ou autrement. Il ne
+// contient donc que des heures : le montant que l'app calcule n'est pas celui
+// que Pajemploi versera, et envoyer un chiffre qui ne correspondra pas au
+// virement créerait une conversation pénible pour rien.
+//
+// L'image se fabrique sur un `<canvas>`, sans bibliothèque ni serveur — l'app
+// n'a pas d'étape de build et doit marcher hors ligne.
+
+const LARGEUR_RELEVE = 760;
+const ECHELLE_RELEVE = 2;          // pour que le texte reste net une fois zoomé
+
+/** Couleurs figées en clair, et non reprises des variables de la charte : le
+ *  relevé est un document qui sort du foyer, il ne doit pas basculer en thème
+ *  sombre selon le réglage du téléphone qui l'a produit. */
+const ENCRE = '#1B1917';
+const ENCRE_PALE = '#7A736C';
+const TRAIT = '#E3DDD4';
+const ROUGE = '#D8232A';
+
+/** Les journées d'un mois réellement travaillées, dans l'ordre. Les jours à
+ *  zéro et les jours non saisis n'ont rien à faire dans un relevé : on y lit
+ *  ce qui a été fait, pas ce qui ne l'a pas été. */
+const journeesDuMois = (personnelId, mois) => etat.personnelsHeures
+  .filter((h) => h.personnel_id === personnelId && h.jour.startsWith(mois) && h.minutes > 0)
+  .sort((a, b) => a.jour.localeCompare(b.jour));
+
+async function dessinerReleve(personne, mois) {
+  const journees = journeesDuMois(personne.id, mois);
+  const { minutes } = totalDuMois(personne.id, mois);
+
+  const marge = 48;
+  const hauteurLigne = 46;
+  const hauteurEntete = 188;
+  const hauteurPied = 150;
+  const hauteur = hauteurEntete + journees.length * hauteurLigne + hauteurPied;
+
+  const canvas = el('canvas', {
+    width: LARGEUR_RELEVE * ECHELLE_RELEVE, height: hauteur * ECHELLE_RELEVE,
+  });
+  const c = canvas.getContext('2d');
+  c.scale(ECHELLE_RELEVE, ECHELLE_RELEVE);
+
+  // Les polices de la charte ne sont utilisables dans un canvas qu'une fois
+  // chargées : sans cette attente, le relevé sortirait en police système.
+  if (document.fonts && document.fonts.ready) await document.fonts.ready;
+  const police = (taille, graisse = 400) =>
+    `${graisse} ${taille}px 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif`;
+
+  c.fillStyle = '#FFFFFF';
+  c.fillRect(0, 0, LARGEUR_RELEVE, hauteur);
+
+  c.fillStyle = ENCRE;
+  c.font = police(34, 700);
+  c.fillText(personne.nom, marge, 72);
+
+  c.fillStyle = ENCRE_PALE;
+  c.font = police(22, 500);
+  c.fillText(libelleMois(mois), marge, 108);
+
+  c.fillStyle = ROUGE;
+  c.fillRect(marge, 132, 64, 4);
+
+  // Colonnes : jour, début, fin, durée — la durée calée à droite.
+  const colJour = marge;
+  const colDebut = marge + 230;
+  const colFin = marge + 360;
+  const colDuree = LARGEUR_RELEVE - marge;
+
+  c.fillStyle = ENCRE_PALE;
+  c.font = police(15, 700);
+  const entete = 172;
+  c.fillText('JOUR', colJour, entete);
+  c.fillText('DÉBUT', colDebut, entete);
+  c.fillText('FIN', colFin, entete);
+  c.textAlign = 'right';
+  c.fillText('HEURES', colDuree, entete);
+  c.textAlign = 'left';
+
+  let y = hauteurEntete + 14;
+  for (const h of journees) {
+    c.strokeStyle = TRAIT;
+    c.lineWidth = 1;
+    c.beginPath();
+    c.moveTo(marge, y - 26);
+    c.lineTo(LARGEUR_RELEVE - marge, y - 26);
+    c.stroke();
+
+    const d = depuisIso(h.jour);
+    const quantieme = d.getDate() === 1 ? '1er' : String(d.getDate());
+    c.fillStyle = ENCRE;
+    c.font = police(20, 500);
+    c.fillText(`${JOURS[(d.getDay() || 7) - 1]} ${quantieme}`, colJour, y);
+    c.font = police(20);
+    c.fillText(hhmm(h.debut) || '—', colDebut, y);
+    c.fillText(hhmm(h.fin) || '—', colFin, y);
+    c.textAlign = 'right';
+    c.font = police(20, 600);
+    c.fillText(formaterDuree(h.minutes), colDuree, y);
+    c.textAlign = 'left';
+    y += hauteurLigne;
+  }
+
+  const yTotal = y + 8;
+  c.strokeStyle = ENCRE;
+  c.lineWidth = 2;
+  c.beginPath();
+  c.moveTo(marge, yTotal - 30);
+  c.lineTo(LARGEUR_RELEVE - marge, yTotal - 30);
+  c.stroke();
+
+  c.fillStyle = ENCRE;
+  c.font = police(22, 700);
+  c.fillText(`Total — ${journees.length} jour${journees.length > 1 ? 's' : ''}`, colJour, yTotal + 10);
+  c.textAlign = 'right';
+  c.font = police(26, 700);
+  c.fillText(formaterDuree(minutes), colDuree, yTotal + 12);
+  c.textAlign = 'left';
+
+  c.fillStyle = ENCRE_PALE;
+  c.font = police(15);
+  c.fillText(`Relevé établi le ${dateAvecAnnee(aujourdhui())}`, colJour, yTotal + 62);
+
+  const blob = await new Promise((r) => canvas.toBlob(r, 'image/png'));
+  // Un nom de fichier sans accent ni espace : il traverse WhatsApp, iOS et
+  // Android sans se faire réécrire en chemin.
+  const nom = `${personne.nom} ${libelleMois(mois)}`
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^A-Za-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  return { canvas, blob, fichier: new File([blob], `${nom}.png`, { type: 'image/png' }) };
+}
+
+/**
+ * Envoie le relevé.
+ *
+ * Le partage natif d'abord : sur iPhone, il ouvre la feuille où WhatsApp
+ * figure déjà, et la photo part en un geste. Un téléchargement classique y
+ * déposerait le fichier dans « Fichiers », qu'il faudrait ensuite aller
+ * rouvrir — quatre gestes au lieu d'un.
+ *
+ * Le fichier est fabriqué à l'avance, à l'affichage de l'aperçu : `share()`
+ * exige d'être appelé dans le geste de l'utilisateur, et Safari refuse si une
+ * attente s'est glissée entre le toucher et l'appel.
+ */
+async function envoyerReleve(fichier, personne, mois) {
+  if (navigator.canShare && navigator.canShare({ files: [fichier] })) {
+    try {
+      await navigator.share({
+        files: [fichier],
+        title: `${personne.nom} — ${libelleMois(mois)}`,
+      });
+    } catch (e) {
+      if (e.name !== 'AbortError') toast('Partage impossible');
+    }
+    return;
+  }
+
+  // Ordinateur, ou navigateur sans partage de fichiers : téléchargement.
+  const url = URL.createObjectURL(fichier);
+  const lien = el('a', { href: url, download: fichier.name });
+  document.body.append(lien);
+  lien.click();
+  lien.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  toast('Relevé téléchargé');
+}
+
+function rendreExport(hote, personne) {
+  const mois = moisConnus(personne.id);
+  if (!mois.length) {
+    hote.append(el('p', { class: 'liste-vide' },
+      el('strong', {}, 'Rien à exporter'),
+      'Saisissez des heures dans le calendrier, les mois apparaîtront ici.'));
+    return;
+  }
+
+  if (!mois.includes(etat.moisExport)) [etat.moisExport] = mois;
+
+  const choix = el('select', { class: 'choix-mois', 'aria-label': 'Mois à exporter' });
+  for (const m of mois) choix.append(el('option', { value: m }, libelleMois(m)));
+  choix.value = etat.moisExport;
+
+  const apercu = el('div', { class: 'apercu-releve' });
+  const bouton = el('button', { class: 'btn btn-primaire', disabled: true }, 'Préparation…');
+
+  const preparer = async () => {
+    bouton.disabled = true;
+    bouton.textContent = 'Préparation…';
+    vider(apercu);
+    try {
+      const { canvas, fichier } = await dessinerReleve(personne, etat.moisExport);
+      canvas.className = 'releve';
+      apercu.append(canvas);
+      bouton.disabled = false;
+      bouton.textContent = navigator.canShare && navigator.canShare({ files: [fichier] })
+        ? 'Envoyer le relevé'
+        : 'Télécharger le relevé';
+      bouton.onclick = () => envoyerReleve(fichier, personne, etat.moisExport);
+    } catch (e) {
+      bouton.textContent = 'Image impossible à produire';
+      toast(`Export impossible : ${e.message}`);
+    }
+  };
+
+  choix.addEventListener('change', () => { etat.moisExport = choix.value; preparer(); });
+
+  hote.append(
+    el('label', { class: 'champ' }, el('span', {}, 'Mois à envoyer'), choix),
+    el('p', { class: 'feuille-info' },
+      'Le relevé ne contient que les heures, jamais de montant : ce que l’app '
+      + 'calcule n’est pas ce que Pajemploi versera, et l’écart se discuterait mal.'),
+    apercu,
+    bouton,
+  );
+
+  preparer();
 }
 
 // ── Créer et régler une personne ───────────────────────────────────────────
