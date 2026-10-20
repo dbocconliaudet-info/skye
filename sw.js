@@ -11,7 +11,7 @@
  * URL : elles, on les sert depuis le cache en priorité.
  */
 
-const VERSION = 'skye-v9';
+const VERSION = 'skye-v10';
 const COQUILLE = [
   './',
   './index.html',
@@ -28,6 +28,7 @@ const COQUILLE = [
   './js/tricount.js',
   './js/anniversaires.js',
   './js/personnel.js',
+  './js/notifications.js',
   './brand/skye-icone-favicon.svg',
   './brand/skye-mark-animated.svg',
   './brand/png/skye-icon-192.png',
@@ -87,5 +88,39 @@ self.addEventListener('fetch', (e) => {
       }
       return rep;
     }))
+  );
+});
+
+// ── Notifications ──────────────────────────────────────────────────────────
+//
+// Le message arrive chiffré d'Apple (ou Google, Mozilla), déjà déchiffré ici :
+// `{ titre, corps, tag, url }`, écrit par scripts/rappels.py. iOS exige qu'une
+// notification s'affiche à chaque réception — c'est la condition pour garder
+// le droit d'en recevoir — d'où le texte de secours si le contenu est illisible.
+
+self.addEventListener('push', (e) => {
+  let message = {};
+  try { message = e.data ? e.data.json() : {}; } catch { /* texte brut : ignoré */ }
+
+  e.waitUntil(self.registration.showNotification(message.titre || 'Skye', {
+    body: message.corps || 'Un rappel t’attend dans Skye.',
+    tag: message.tag || undefined,
+    icon: './brand/png/skye-icon-192.png',
+    badge: './brand/png/skye-icon-192.png',
+    data: { url: message.url || './' },
+  }));
+});
+
+// Toucher la notification ramène dans l'app : celle déjà ouverte si possible,
+// une nouvelle sinon.
+self.addEventListener('notificationclick', (e) => {
+  e.notification.close();
+  const cible = new URL(e.notification.data?.url || './', self.registration.scope).href;
+  e.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((fenetres) => {
+      const ouverte = fenetres.find((f) => f.url.startsWith(self.registration.scope));
+      if (ouverte) return ouverte.focus();
+      return self.clients.openWindow(cible);
+    })
   );
 });

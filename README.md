@@ -4,8 +4,35 @@ Web app privée pour organiser à deux les tâches du quotidien et les courses.
 Installable sur l'écran d'accueil d'un téléphone, synchronisée en temps réel
 entre les deux membres du foyer.
 
-Cahier des charges complet : [`brief/cahier-des-charges-todomtadam.md`](brief/cahier-des-charges-todomtadam.md),
-puis [`brief/evolutions-v2-todomtadam.md`](brief/evolutions-v2-todomtadam.md) pour la suite.
+Les briefs de cadrage (cahier des charges, évolutions, maquettes) vivent dans
+`brief/`, sur l'ordinateur seulement : le dossier est exclu du dépôt public.
+
+---
+
+## Mise à jour : les rappels du matin (notifications)
+
+Chaque matin vers 8 h 30, Skye envoie sur les téléphones inscrits les
+anniversaires du jour, et pour ceux marqués 🎁 un rappel 3 semaines puis
+1 semaine avant. L'envoi part de GitHub Actions
+([`.github/workflows/rappels.yml`](.github/workflows/rappels.yml)), gratuit
+pour un dépôt public.
+
+1. **Supabase** : SQL Editor → New query → coller
+   [`supabase/schema-v9.sql`](supabase/schema-v9.sql) → Run.
+2. **GitHub** : Settings → Secrets and variables → Actions → New repository
+   secret, deux fois :
+   - `SUPABASE_SERVICE_ROLE_KEY` : la clé secrète du projet (Supabase →
+     Project Settings → API Keys). Elle ouvre toute la base : ici et nulle part
+     ailleurs.
+   - `VAPID_PRIVATE_KEY` : la clé privée des notifications, générée une fois et
+     gardée hors du dépôt. Sa moitié publique est dans `js/config.js`.
+3. **Chaque iPhone** : ouvrir Skye depuis l'écran d'accueil → ⚙ → **Activer
+   les rappels** → Autoriser.
+4. **Vérifier** : GitHub → Actions → Rappels du matin → Run workflow (mode
+   `test`). Une notification d'essai arrive sur chaque téléphone inscrit.
+
+Si la clé VAPID devait changer un jour, tous les téléphones seraient à
+réinscrire : les abonnements sont liés à la clé.
 
 ---
 
@@ -86,8 +113,9 @@ tableau de bord Supabase → **Table Editor** → `espaces` → colonne
    [`supabase/schema-v4.sql`](supabase/schema-v4.sql),
    [`supabase/schema-v5.sql`](supabase/schema-v5.sql),
    [`supabase/schema-v6.sql`](supabase/schema-v6.sql),
-   [`supabase/schema-v7.sql`](supabase/schema-v7.sql), puis
-   [`supabase/schema-v8.sql`](supabase/schema-v8.sql)
+   [`supabase/schema-v7.sql`](supabase/schema-v7.sql),
+   [`supabase/schema-v8.sql`](supabase/schema-v8.sql), puis
+   [`supabase/schema-v9.sql`](supabase/schema-v9.sql)
 
 Les scripts sont rejouables sans risque : les relancer ne détruit aucune donnée.
 Ils s'exécutent dans l'ordre — `v2` s'appuie sur les tables de `schema.sql`,
@@ -164,8 +192,11 @@ JavaScript exigent un vrai serveur (`http://`, pas `file://`).
 | `js/tricount.js` | Module « Tricount » : dépenses et solde |
 | `js/anniversaires.js` | Module « Anniversaires » |
 | `js/personnel.js` | Module « Home team » : heures, taux et paiements du personnel |
+| `js/notifications.js` | Abonnement de ce téléphone aux rappels |
 | `js/app.js` | Démarrage, onboarding, navigation |
-| `sw.js` + `manifest.json` | Ce qui rend l'app installable |
+| `sw.js` + `manifest.json` | Ce qui rend l'app installable, et l'affichage des notifications |
+| `scripts/rappels.py` | Les rappels du matin, lancés par GitHub Actions |
+| `.github/workflows/rappels.yml` | La planification de ces rappels |
 | `supabase/schema.sql` | Le schéma de base de données |
 | `supabase/schema-v2.sql` | Comptes, Row Level Security, dates, messages |
 | `supabase/schema-v3.sql` | Les dépenses du module « Tricount » |
@@ -174,6 +205,7 @@ JavaScript exigent un vrai serveur (`http://`, pas `file://`).
 | `supabase/schema-v6.sql` | Les quatre magasins des Courses |
 | `supabase/schema-v7.sql` | Le personnel de maison : heures, taux, paiements |
 | `supabase/schema-v8.sql` | La saisie des heures par début et fin de journée |
+| `supabase/schema-v9.sql` | Les téléphones abonnés aux notifications |
 | `brand/` | Le kit de marque : logotype, icônes, animation de lancement |
 | `logo/` | La charte complète et le kit d'origine, pour référence |
 
@@ -265,13 +297,9 @@ Le tout se synchronise en direct entre les deux téléphones.
 
 ### Ce qui n'y est pas encore
 
-- **Notifications push.** Le cahier des charges les prévoit (§3), mais elles
-  demandent un chantier à part : génération de clés VAPID, Edge Function
-  Supabase, tâche planifiée `pg_cron`, stockage des abonnements, et sur iPhone
-  elles n'arrivent que si l'app est installée sur l'écran d'accueil. Les
-  critères de succès du premier livrable (§10) ne les incluent pas, donc c'est
-  reporté au prochain tour. Les tâches récurrentes, elles, fonctionnent :
-  chaque occurrence apparaît toute seule à sa date, sans serveur.
+- **Notifications immédiates** (« un mot t'attend », « à toi de jouer ») :
+  seuls les rappels du matin existent. Les envois immédiats demanderont une
+  Edge Function Supabase, qui réutilisera les mêmes abonnements et la même clé.
 - **Module Documents** et **module Agenda** : hors périmètre v1 (§8).
 - Des évolutions v2, la **connexion par Face ID / Touch ID** (passkeys) reste à
   faire — le document la range explicitement en phase 2, à n'ouvrir qu'une fois

@@ -1,0 +1,71 @@
+# Rappels du matin (anniversaires, cadeaux à prévoir) — voir scripts/rappels.py.
+#
+# Secrets à créer dans GitHub › Settings › Secrets and variables › Actions :
+#   SUPABASE_SERVICE_ROLE_KEY  Supabase › Project Settings › API keys (clé secrète)
+#   VAPID_PRIVATE_KEY          générée une fois, jamais dans le dépôt
+#
+# Le dépôt est public : les journaux de ce workflow aussi. Le script n'y écrit
+# que des nombres, et GitHub masque d'office la valeur des secrets.
+
+name: Rappels du matin
+
+on:
+  schedule:
+    # GitHub compte en heure UTC et ignore l'heure d'été. Deux passages :
+    # 6 h 31 UTC = 8 h 31 à Paris l'été, 7 h 31 UTC = 8 h 31 l'hiver. Le
+    # script ignore celui qui tombe avant 8 h et ne notifie qu'une fois par
+    # jour, quel que soit le nombre de passages. Minute 31 plutôt que 30 :
+    # les heures rondes sont celles où GitHub, saturé, prend le plus de retard.
+    - cron: '31 6 * * *'
+    - cron: '31 7 * * *'
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: '« test » envoie une notification d’essai à tous les téléphones inscrits'
+        type: choice
+        options: [test, quotidien]
+        default: test
+
+permissions:
+  contents: read
+  actions: write   # pour le réarmement, plus bas
+
+# Deux passages ne se chevauchent jamais : le second attend la fin du premier.
+concurrency:
+  group: rappels
+  cancel-in-progress: false
+
+jobs:
+  rappels:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.13'
+          cache: pip
+          cache-dependency-path: scripts/requirements.txt
+
+      - run: pip install -r scripts/requirements.txt
+
+      - name: Envoyer les rappels
+        run: python scripts/rappels.py
+        env:
+          MODE: ${{ inputs.mode || 'quotidien' }}
+          SUPABASE_URL: https://rorswahnjnvbmabnjtlh.supabase.co
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
+          # Contact exigé par Apple : une adresse https sans chemin, ou un
+          # mailto. Le site plutôt qu'un email, le dépôt étant public.
+          VAPID_SUBJECT: https://dbocconliaudet-info.github.io
+
+      # GitHub désactive les tâches planifiées d'un dépôt public après 60 jours
+      # sans commit — un dépôt qui ne bouge pas l'été, par exemple. Réactiver le
+      # workflow à chaque passage remet ce compteur à zéro, sans créer de commit.
+      - name: Réarmer la planification
+        if: always() && github.event_name == 'schedule'
+        run: gh api -X PUT "repos/${{ github.repository }}/actions/workflows/rappels.yml/enable"
+        env:
+          GH_TOKEN: ${{ github.token }}

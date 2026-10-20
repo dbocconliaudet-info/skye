@@ -1,7 +1,12 @@
 // Accès aux données. Tout passe par le SDK Supabase chargé depuis un CDN :
 // pas d'étape de build, le navigateur télécharge le module directement.
+//
+// Version exacte, et non `@2` : une adresse flottante changerait de contenu
+// sous nos pieds à chaque nouvelle version, alors que le service worker la
+// garde en cache comme si elle était immuable. Monter de version = changer ce
+// numéro, en connaissance de cause.
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.118.0';
 import { SUPABASE_URL, SUPABASE_CLE_PUBLIQUE } from './config.js';
 
 export const sb = createClient(SUPABASE_URL, SUPABASE_CLE_PUBLIQUE, {
@@ -336,6 +341,26 @@ export const envoyerMessage = async (espaceId, auteurId, destinataireId, contenu
  *  qu'il l'a bien envoyé, sans que personne puisse le relire dans l'app. */
 export const marquerMessageLu = async (id) =>
   ok(await sb.from('messages').update({ lu: true }).eq('id', id));
+
+// ── Notifications ──────────────────────────────────────────────────────────
+
+/** Enregistre ce téléphone comme destinataire des notifications. `endpoint`
+ *  est unique : réactiver sur un téléphone déjà inscrit met sa ligne à jour
+ *  au lieu d'en créer une seconde, qui recevrait chaque rappel en double. */
+export const enregistrerAbonnementPush = async (espaceId, membreId, abonnement) => {
+  const { endpoint, keys } = abonnement.toJSON();
+  return ok(await sb.from('push_abonnements').upsert({
+    espace_id: espaceId,
+    membre_id: membreId,
+    endpoint,
+    p256dh: keys.p256dh,
+    auth: keys.auth,
+    appareil: navigator.userAgent.slice(0, 200),
+  }, { onConflict: 'endpoint' }));
+};
+
+export const supprimerAbonnementPush = async (endpoint) =>
+  ok(await sb.from('push_abonnements').delete().eq('endpoint', endpoint));
 
 // ── Temps réel ─────────────────────────────────────────────────────────────
 

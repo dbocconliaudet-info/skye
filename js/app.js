@@ -14,6 +14,9 @@ import {
   rendreAnniversaires, ouvrirNouvelAnniversaire, construireOngletsMois,
 } from './anniversaires.js';
 import { rendrePersonnel, retourPersonnel } from './personnel.js';
+import {
+  sectionNotifications, synchroniserAbonnement, oublierCeTelephone,
+} from './notifications.js';
 
 // ══════════════════ Onboarding ══════════════════
 
@@ -220,6 +223,7 @@ function flotNouveauMotDePasse(formulaire) {
 
 async function seDeconnecter() {
   if (desabonner) { desabonner(); desabonner = null; }
+  await oublierCeTelephone();
   await db.deconnecter();
   dejaConnecte = false;
   oublierSession();
@@ -266,6 +270,7 @@ async function entrerDansApp() {
   // Après le board, pas avant : un mot doux sur un écran encore vide tomberait
   // à plat, et on a besoin des pseudos chargés pour nommer son auteur.
   afficherMotsRecus();
+  synchroniserAbonnement();
 }
 
 async function rechargerDonnees() {
@@ -722,6 +727,9 @@ function ouvrirReglages() {
       ? el('button', { class: 'btn btn-secondaire', onclick: ouvrirEcritureMot },
         `Écrire un mot à ${partenaire().pseudo}`)
       : null,
+
+    el('div', { class: 'separateur' }),
+    sectionNotifications(),
 
     el('div', { class: 'separateur' }),
     sectionDates(),
