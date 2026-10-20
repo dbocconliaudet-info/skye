@@ -901,6 +901,7 @@ input,select,textarea{font-family:var(--font-ui);font-size:16px;color:inherit;}
 /* ══════════════════ Module « Guide des tailles » ══════════════════ */
 
 .tailles-info{margin:var(--space-2) var(--space-1) 0;}
+.tailles-vestiaire{margin:var(--space-3) 0 var(--space-4);}
 .taille{
   display:flex;align-items:center;gap:var(--space-3);width:100%;text-align:left;
   background:var(--surface);border:1px solid var(--line-2);border-radius:var(--radius-md);

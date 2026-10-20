@@ -5,10 +5,10 @@
 // lit sans se modifier — la base le refuse de toute façon (schema-v10.sql).
 
 import {
-  $, el, vider, montrer, toast, ouvrirFeuille, fermerFeuille, confirmer,
+  $, el, vider, montrer, toast, ouvrirFeuille, fermerFeuille, confirmer, groupeOptions,
 } from './ui.js';
-import { etat, partenaire, pseudoDe } from './etat.js';
-import { TYPES_VETEMENT, libelleDe } from './config.js';
+import { etat, partenaire, pseudoDe, membreParId } from './etat.js';
+import { TYPES_VETEMENT, VESTIAIRES } from './config.js';
 import * as db from './db.js';
 
 /** L'onglet affiché par défaut est celui de l'autre : on vient surtout ici
@@ -24,6 +24,28 @@ function ongletCourant() {
 /** « Zara » et « zara » sont la même marque : on regroupe sans tenir compte
  *  de la casse ni des espaces, et on affiche la graphie de la première saisie. */
 const cleMarque = (marque) => marque.trim().toLocaleLowerCase('fr');
+
+const vestiaireDe = (membreId) => membreParId(membreId)?.vestiaire || null;
+
+/**
+ * Le libellé d'un type pour un vestiaire donné. Sans vestiaire choisi, ou pour
+ * un type absent de ce vestiaire, on montre les libellés existants côte à côte
+ * plutôt que de deviner. Une clé inconnue — retirée de la liste depuis sa
+ * saisie — s'affiche « Autre » : la taille reste lisible, c'est l'essentiel.
+ */
+export function libelleType(cle, vestiaire) {
+  const type = TYPES_VETEMENT.find((t) => t.cle === cle);
+  if (!type) return 'Autre';
+  if (vestiaire && type[vestiaire]) return type[vestiaire];
+  return [...new Set([type.homme, type.femme].filter(Boolean))].join(' / ');
+}
+
+/** Les types à proposer dans le formulaire, selon le vestiaire. */
+function typesPour(vestiaire) {
+  return TYPES_VETEMENT
+    .filter((t) => !vestiaire || t[vestiaire])
+    .map((t) => ({ cle: t.cle, libelle: libelleType(t.cle, vestiaire) }));
+}
 
 const rangType = (type) => {
   const i = TYPES_VETEMENT.findIndex((t) => t.cle === type);
@@ -42,6 +64,8 @@ export function rendreTailles() {
   const hote = vider($('#contenu-tailles'));
   const lignes = etat.tailles.filter((t) => t.membre_id === membreId);
   const prenom = pseudoDe(membreId);
+
+  if (estMoi && !vestiaireDe(membreId)) hote.append(choixVestiaire());
 
   if (!lignes.length) {
     hote.append(el('div', { class: 'anniv-vide' }, estMoi
@@ -91,10 +115,35 @@ function rendreOnglets(membreId) {
   }
 }
 
+/** Posé en tête de son propre onglet tant que le vestiaire n'est pas choisi :
+ *  c'est ici qu'on en a besoin, autant ne pas renvoyer vers les réglages. */
+function choixVestiaire() {
+  return el('div', { class: 'tailles-vestiaire' },
+    el('p', { class: 'feuille-info' },
+      'Quelle liste de vêtements te proposer ? « Chemise » ou « Chemisier », '
+      + '« Caleçon » ou « Sous-vêtements »… Modifiable ensuite dans ⚙ Réglages.'),
+    groupeOptions(VESTIAIRES, null, {
+      onChange: async (vestiaire) => {
+        try {
+          await enregistrerVestiaire(vestiaire);
+          rendreTailles();
+        } catch (e) {
+          toast(`Enregistrement impossible : ${e.message}`);
+        }
+      },
+    }));
+}
+
+/** Enregistre le vestiaire de la personne connectée. Partagé avec les réglages. */
+export async function enregistrerVestiaire(vestiaire) {
+  const membre = await db.majMembre(etat.membreId, { vestiaire });
+  etat.membres = etat.membres.map((m) => (m.id === membre.id ? membre : m));
+}
+
 function ligne(t, modifiable) {
   const contenu = [
     el('div', { class: 'taille-corps' },
-      el('p', { class: 'taille-type' }, libelleDe(TYPES_VETEMENT, t.type)),
+      el('p', { class: 'taille-type' }, libelleType(t.type, vestiaireDe(t.membre_id))),
       t.precisions ? el('p', { class: 'taille-precisions' }, t.precisions) : null),
     el('span', { class: 'taille-valeur' }, t.taille),
   ];
@@ -131,9 +180,16 @@ function ouvrirFiche(existant) {
   // `list` est en lecture seule côté JavaScript : `el` ne peut pas l'affecter,
   // il passe par l'attribut.
   champMarque.setAttribute('list', 'marques-saisies');
+  const vestiaire = vestiaireDe(etat.membreId);
+  const types = typesPour(vestiaire);
+  // Une taille saisie avant un changement de liste garde son type : on
+  // l'ajoute au menu plutôt que de la faire basculer en silence sur un autre.
+  if (t.type && !types.some((x) => x.cle === t.type)) {
+    types.push({ cle: t.type, libelle: libelleType(t.type, vestiaire) });
+  }
   const champType = el('select', {},
-    TYPES_VETEMENT.map((x) => el('option', {
-      value: x.cle, selected: (t.type || TYPES_VETEMENT[0].cle) === x.cle,
+    types.map((x) => el('option', {
+      value: x.cle, selected: (t.type || types[0].cle) === x.cle,
     }, x.libelle)));
   const champTaille = el('input', {
     type: 'text', value: t.taille || '', maxlength: 20, placeholder: 'M, 38, 42 EU, 85B…',
@@ -172,7 +228,7 @@ function ouvrirFiche(existant) {
   };
 
   ouvrirFeuille(el('div', {},
-    el('h2', {}, estNouveau ? 'Nouvelle taille' : `${t.marque} · ${libelleDe(TYPES_VETEMENT, t.type)}`),
+    el('h2', {}, estNouveau ? 'Nouvelle taille' : `${t.marque} · ${libelleType(t.type, vestiaire)}`),
     el('label', { class: 'champ' }, el('span', {}, 'Marque'), champMarque),
     suggestions,
     el('div', { class: 'champ-duo' },
@@ -190,7 +246,7 @@ function ouvrirFiche(existant) {
 async function supprimer(t) {
   fermerFeuille();
   const oui = await confirmer(
-    `Supprimer ${libelleDe(TYPES_VETEMENT, t.type).toLocaleLowerCase('fr')} chez ${t.marque} ?`,
+    `Supprimer « ${libelleType(t.type, vestiaireDe(t.membre_id))} » chez ${t.marque} ?`,
     { texteOk: 'Supprimer', danger: true },
   );
   if (!oui) return;

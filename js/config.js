@@ -35,28 +35,38 @@ export const CATEGORIES = [
 export const MAGASINS_DEFAUT = ['Grand Frais', 'Monoprix', 'Pharmacie', 'Autres'];
 export const NB_MAGASINS = MAGASINS_DEFAUT.length;
 
-// Types de vêtement du guide des tailles. Une liste plutôt qu'un champ libre :
-// sans elle on finit avec « T-shirt », « tshirt » et « tee-shirt » côte à côte.
-// La clé est stockée en base : on peut renommer un libellé ou en ajouter un,
-// mais pas changer une clé déjà utilisée.
+// Types de vêtement du guide des tailles, avec un libellé par vestiaire :
+// Damien choisit « Chemise », Dom « Chemisier ». `null` = absent de cette
+// liste. Le vestiaire de chacun se règle dans ⚙ (colonne membres.vestiaire).
+//
+// La clé est stockée en base : on peut renommer un libellé ou ajouter une
+// ligne, mais pas changer une clé déjà utilisée. L'ordre est celui de
+// l'affichage, du haut du corps vers le bas.
 export const TYPES_VETEMENT = [
-  { cle: 'haut', libelle: 'Haut / T-shirt' },
-  { cle: 'chemise', libelle: 'Chemise / Chemisier' },
-  { cle: 'pull', libelle: 'Pull / Sweat' },
-  { cle: 'veste', libelle: 'Veste / Manteau' },
-  { cle: 'pantalon', libelle: 'Pantalon' },
-  { cle: 'jean', libelle: 'Jean' },
-  { cle: 'robe', libelle: 'Robe / Jupe' },
-  { cle: 'short', libelle: 'Short' },
-  { cle: 'lingerie', libelle: 'Lingerie / Sous-vêtements' },
-  { cle: 'maillot', libelle: 'Maillot de bain' },
-  { cle: 'pyjama', libelle: 'Pyjama' },
-  { cle: 'chaussures', libelle: 'Chaussures' },
-  { cle: 'chaussettes', libelle: 'Chaussettes / Collants' },
-  { cle: 'bague', libelle: 'Bague' },
-  { cle: 'ceinture', libelle: 'Ceinture' },
-  { cle: 'accessoire', libelle: 'Autre accessoire' },
-  { cle: 'autre', libelle: 'Autre' },
+  { cle: 'haut', homme: 'T-shirt', femme: 'Haut' },
+  { cle: 'chemise', homme: 'Chemise', femme: 'Chemisier' },
+  { cle: 'pull', homme: 'Pull / Sweat', femme: 'Pull / Sweat' },
+  { cle: 'veste', homme: 'Veste / Manteau', femme: 'Veste / Manteau' },
+  { cle: 'costume', homme: 'Costume', femme: null },
+  { cle: 'robe', homme: null, femme: 'Robe' },
+  { cle: 'jupe', homme: null, femme: 'Jupe' },
+  { cle: 'pantalon', homme: 'Pantalon', femme: 'Pantalon' },
+  { cle: 'jean', homme: 'Jean', femme: 'Jean' },
+  { cle: 'short', homme: 'Short', femme: 'Short' },
+  { cle: 'lingerie', homme: 'Caleçon', femme: 'Sous-vêtements' },
+  { cle: 'soutien_gorge', homme: null, femme: 'Soutien-gorge' },
+  { cle: 'maillot', homme: 'Maillot de bain', femme: 'Maillot de bain' },
+  { cle: 'pyjama', homme: 'Pyjama', femme: 'Pyjama' },
+  { cle: 'chaussures', homme: 'Chaussures', femme: 'Chaussures' },
+  { cle: 'chaussettes', homme: 'Chaussettes', femme: 'Chaussettes / Collants' },
+  { cle: 'bague', homme: null, femme: 'Bague' },
+  { cle: 'ceinture', homme: 'Ceinture', femme: 'Ceinture' },
+  { cle: 'autre', homme: 'Autre', femme: 'Autre' },
+];
+
+export const VESTIAIRES = [
+  { cle: 'homme', libelle: 'Homme' },
+  { cle: 'femme', libelle: 'Femme' },
 ];
 
 export const PRIORITES = [

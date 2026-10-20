@@ -2,10 +2,10 @@
 
 import {
   $, $$, el, vider, montrer, toast, ouvrirFeuille, fermerFeuille, confirmer,
-  feuilleEstOuverte, formaterDate, joursRestants, versIso,
+  feuilleEstOuverte, formaterDate, joursRestants, versIso, groupeOptions,
 } from './ui.js';
 import { etat, oublierSession, pseudoDe, moi, partenaire } from './etat.js';
-import { MAGASINS_DEFAUT, NB_MAGASINS } from './config.js';
+import { MAGASINS_DEFAUT, NB_MAGASINS, VESTIAIRES } from './config.js';
 import * as db from './db.js';
 import { rendreTaches, ouvrirNouvelleTache, genererOccurrencesDues } from './taches.js';
 import { rendreCourses, retourCourses, nomMagasin } from './courses.js';
@@ -14,7 +14,7 @@ import {
   rendreAnniversaires, ouvrirNouvelAnniversaire, construireOngletsMois,
 } from './anniversaires.js';
 import { rendrePersonnel, retourPersonnel } from './personnel.js';
-import { rendreTailles, ouvrirNouvelleTaille } from './tailles.js';
+import { rendreTailles, ouvrirNouvelleTaille, enregistrerVestiaire } from './tailles.js';
 import {
   sectionNotifications, synchroniserAbonnement, oublierCeTelephone,
 } from './notifications.js';
@@ -673,6 +673,28 @@ function sectionDates() {
   );
 }
 
+/** Le vestiaire du guide des tailles : quelle liste de vêtements proposer.
+ *  Enregistré dès le choix, sans bouton : il n'y a qu'une valeur à retenir. */
+function sectionVestiaire() {
+  return el('div', {},
+    el('h3', { class: 'feuille-titre' }, 'Guide des tailles'),
+    el('p', { class: 'feuille-info' },
+      'La liste de vêtements qui t’est proposée : « Chemise » ou « Chemisier », '
+      + '« Caleçon » ou « Sous-vêtements »…'),
+    groupeOptions(VESTIAIRES, moi()?.vestiaire || null, {
+      onChange: async (vestiaire) => {
+        try {
+          await enregistrerVestiaire(vestiaire);
+          rendreTailles();
+          toast('Liste de vêtements enregistrée');
+        } catch (e) {
+          toast(`Enregistrement impossible : ${e.message}`);
+        }
+      },
+    }),
+  );
+}
+
 /**
  * Les quatre enseignes du module Courses. Toujours quatre, ni plus ni moins :
  * la grille 2×2 en dépend, et s'en tenir là évite un écran de gestion entier.
@@ -744,6 +766,9 @@ function ouvrirReglages() {
 
     el('div', { class: 'separateur' }),
     sectionMagasins(),
+
+    el('div', { class: 'separateur' }),
+    sectionVestiaire(),
 
     el('div', { class: 'separateur' }),
     el('label', { class: 'champ' },

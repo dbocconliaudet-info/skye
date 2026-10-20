@@ -11,14 +11,16 @@ Les briefs de cadrage (cahier des charges, évolutions, maquettes) vivent dans
 
 ## Mise à jour : le guide des tailles
 
-Une seule étape : **SQL Editor** → **New query** → coller tout
-[`supabase/schema-v10.sql`](supabase/schema-v10.sql) → **Run**.
+Dans **SQL Editor** → **New query**, passer
+[`supabase/schema-v10.sql`](supabase/schema-v10.sql) puis
+[`supabase/schema-v11.sql`](supabase/schema-v11.sql) → **Run**.
 
 Le module « Guide des tailles » apparaît ensuite sur l'accueil : un onglet par
 personne, les tailles groupées par marque. Chacun saisit les siennes, l'autre
 les consulte sans pouvoir les modifier — la base l'interdit, pas seulement
-l'écran. La liste des types de vêtement se règle dans `js/config.js`
-(`TYPES_VETEMENT`).
+l'écran. Chacun choisit sa liste de vêtements, homme ou femme (« Chemise » ou
+« Chemisier »), à la première ouverture ou dans ⚙ Réglages. Les listes se
+règlent dans `js/config.js` (`TYPES_VETEMENT`).
 
 ---
 
@@ -128,8 +130,9 @@ tableau de bord Supabase → **Table Editor** → `espaces` → colonne
    [`supabase/schema-v6.sql`](supabase/schema-v6.sql),
    [`supabase/schema-v7.sql`](supabase/schema-v7.sql),
    [`supabase/schema-v8.sql`](supabase/schema-v8.sql),
-   [`supabase/schema-v9.sql`](supabase/schema-v9.sql), puis
-   [`supabase/schema-v10.sql`](supabase/schema-v10.sql)
+   [`supabase/schema-v9.sql`](supabase/schema-v9.sql),
+   [`supabase/schema-v10.sql`](supabase/schema-v10.sql), puis
+   [`supabase/schema-v11.sql`](supabase/schema-v11.sql)
 
 Les scripts sont rejouables sans risque : les relancer ne détruit aucune donnée.
 Ils s'exécutent dans l'ordre — `v2` s'appuie sur les tables de `schema.sql`,
@@ -222,6 +225,7 @@ JavaScript exigent un vrai serveur (`http://`, pas `file://`).
 | `supabase/schema-v8.sql` | La saisie des heures par début et fin de journée |
 | `supabase/schema-v9.sql` | Les téléphones abonnés aux notifications |
 | `supabase/schema-v10.sql` | Le guide des tailles |
+| `supabase/schema-v11.sql` | La liste de vêtements de chacun (homme / femme) |
 | `brand/` | Le kit de marque : logotype, icônes, animation de lancement |
 | `logo/` | La charte complète et le kit d'origine, pour référence |
 
