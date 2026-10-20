@@ -35,6 +35,30 @@ export const CATEGORIES = [
 export const MAGASINS_DEFAUT = ['Grand Frais', 'Monoprix', 'Pharmacie', 'Autres'];
 export const NB_MAGASINS = MAGASINS_DEFAUT.length;
 
+// Types de vêtement du guide des tailles. Une liste plutôt qu'un champ libre :
+// sans elle on finit avec « T-shirt », « tshirt » et « tee-shirt » côte à côte.
+// La clé est stockée en base : on peut renommer un libellé ou en ajouter un,
+// mais pas changer une clé déjà utilisée.
+export const TYPES_VETEMENT = [
+  { cle: 'haut', libelle: 'Haut / T-shirt' },
+  { cle: 'chemise', libelle: 'Chemise / Chemisier' },
+  { cle: 'pull', libelle: 'Pull / Sweat' },
+  { cle: 'veste', libelle: 'Veste / Manteau' },
+  { cle: 'pantalon', libelle: 'Pantalon' },
+  { cle: 'jean', libelle: 'Jean' },
+  { cle: 'robe', libelle: 'Robe / Jupe' },
+  { cle: 'short', libelle: 'Short' },
+  { cle: 'lingerie', libelle: 'Lingerie / Sous-vêtements' },
+  { cle: 'maillot', libelle: 'Maillot de bain' },
+  { cle: 'pyjama', libelle: 'Pyjama' },
+  { cle: 'chaussures', libelle: 'Chaussures' },
+  { cle: 'chaussettes', libelle: 'Chaussettes / Collants' },
+  { cle: 'bague', libelle: 'Bague' },
+  { cle: 'ceinture', libelle: 'Ceinture' },
+  { cle: 'accessoire', libelle: 'Autre accessoire' },
+  { cle: 'autre', libelle: 'Autre' },
+];
+
 export const PRIORITES = [
   { cle: 'basse', libelle: 'Basse' },
   { cle: 'moyenne', libelle: 'Moyenne' },

@@ -249,6 +249,20 @@ export const majAnniversaire = async (id, patch) =>
 export const supprimerAnniversaire = async (id) =>
   ok(await sb.from('anniversaires').delete().eq('id', id));
 
+// ── Guide des tailles ──────────────────────────────────────────────────────
+
+export const chargerTailles = async (espaceId) =>
+  ok(await sb.from('tailles').select('*').eq('espace_id', espaceId).order('cree_le'));
+
+export const creerTaille = async (taille) =>
+  ok(await sb.from('tailles').insert(taille).select().single());
+
+export const majTaille = async (id, patch) =>
+  ok(await sb.from('tailles').update(patch).eq('id', id).select().single());
+
+export const supprimerTaille = async (id) =>
+  ok(await sb.from('tailles').delete().eq('id', id));
+
 // ── Home team (personnel de maison) ────────────────────────────────────────
 
 export const chargerPersonnels = async (espaceId) =>
@@ -370,7 +384,7 @@ export function abonner(espaceId, auChangement) {
   const canal = sb.channel(`espace-${espaceId}`);
 
   for (const table of ['taches', 'listes_courses', 'articles_courses', 'membres',
-    'depenses', 'anniversaires', 'personnels', 'personnels_taux',
+    'depenses', 'anniversaires', 'tailles', 'personnels', 'personnels_taux',
     'personnels_heures', 'personnels_paiements']) {
     canal.on(
       'postgres_changes',

@@ -23,6 +23,7 @@ export const etat = {
   articles: [],
   depenses: [],
   anniversaires: [],
+  tailles: [],
   personnels: [],
   personnelsTaux: [],
   personnelsHeures: [],     // 24 derniers mois seulement (voir db.chargerHeures)
@@ -35,6 +36,7 @@ export const etat = {
   filtreHisto: 'tout',       // 'tout' | 'fait' | 'sans_objet'
   groupement: 'personne',    // 'personne' | 'categorie' | 'priorite'
   vueAnniversaires: 'a_venir', // 'a_venir' | 1..12
+  ongletTailles: null,       // id du membre dont on lit les tailles
   listeActiveId: null,
   // Index du magasin ouvert en pleine page, ou null quand on est sur la grille
   // des quatre encadrés. Sous-navigation interne au module Courses : c'est elle
@@ -54,9 +56,9 @@ export function oublierSession() {
   Object.assign(etat, {
     espaceId: null, espaceNom: '', lienInvitation: '', dateMariage: '',
     dernierMomentADeux: '', magasins: [], membreId: null,
-    membres: [], taches: [], listes: [], articles: [], depenses: [], anniversaires: [],
+    membres: [], taches: [], listes: [], articles: [], depenses: [], anniversaires: [], tailles: [],
     personnels: [], personnelsTaux: [], personnelsHeures: [], personnelsPaiements: [],
-    listeActiveId: null, magasinOuvert: null, personnelOuvert: null,
+    ongletTailles: null, listeActiveId: null, magasinOuvert: null, personnelOuvert: null,
     lundiAffiche: '', moisExport: '',
   });
 }

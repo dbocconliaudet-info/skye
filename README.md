@@ -9,6 +9,19 @@ Les briefs de cadrage (cahier des charges, évolutions, maquettes) vivent dans
 
 ---
 
+## Mise à jour : le guide des tailles
+
+Une seule étape : **SQL Editor** → **New query** → coller tout
+[`supabase/schema-v10.sql`](supabase/schema-v10.sql) → **Run**.
+
+Le module « Guide des tailles » apparaît ensuite sur l'accueil : un onglet par
+personne, les tailles groupées par marque. Chacun saisit les siennes, l'autre
+les consulte sans pouvoir les modifier — la base l'interdit, pas seulement
+l'écran. La liste des types de vêtement se règle dans `js/config.js`
+(`TYPES_VETEMENT`).
+
+---
+
 ## Mise à jour : les rappels du matin (notifications)
 
 Chaque matin vers 8 h 30, Skye envoie sur les téléphones inscrits les
@@ -114,8 +127,9 @@ tableau de bord Supabase → **Table Editor** → `espaces` → colonne
    [`supabase/schema-v5.sql`](supabase/schema-v5.sql),
    [`supabase/schema-v6.sql`](supabase/schema-v6.sql),
    [`supabase/schema-v7.sql`](supabase/schema-v7.sql),
-   [`supabase/schema-v8.sql`](supabase/schema-v8.sql), puis
-   [`supabase/schema-v9.sql`](supabase/schema-v9.sql)
+   [`supabase/schema-v8.sql`](supabase/schema-v8.sql),
+   [`supabase/schema-v9.sql`](supabase/schema-v9.sql), puis
+   [`supabase/schema-v10.sql`](supabase/schema-v10.sql)
 
 Les scripts sont rejouables sans risque : les relancer ne détruit aucune donnée.
 Ils s'exécutent dans l'ordre — `v2` s'appuie sur les tables de `schema.sql`,
@@ -191,6 +205,7 @@ JavaScript exigent un vrai serveur (`http://`, pas `file://`).
 | `js/courses.js` | Module « Courses » : les quatre magasins et les lignes éditables |
 | `js/tricount.js` | Module « Tricount » : dépenses et solde |
 | `js/anniversaires.js` | Module « Anniversaires » |
+| `js/tailles.js` | Module « Guide des tailles » |
 | `js/personnel.js` | Module « Home team » : heures, taux et paiements du personnel |
 | `js/notifications.js` | Abonnement de ce téléphone aux rappels |
 | `js/app.js` | Démarrage, onboarding, navigation |
@@ -206,6 +221,7 @@ JavaScript exigent un vrai serveur (`http://`, pas `file://`).
 | `supabase/schema-v7.sql` | Le personnel de maison : heures, taux, paiements |
 | `supabase/schema-v8.sql` | La saisie des heures par début et fin de journée |
 | `supabase/schema-v9.sql` | Les téléphones abonnés aux notifications |
+| `supabase/schema-v10.sql` | Le guide des tailles |
 | `brand/` | Le kit de marque : logotype, icônes, animation de lancement |
 | `logo/` | La charte complète et le kit d'origine, pour référence |
 

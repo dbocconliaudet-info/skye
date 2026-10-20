@@ -254,6 +254,15 @@
     <button class="fab" data-action="nouvel-anniversaire" aria-label="Nouvel anniversaire">+</button>
   </main>
 
+  <!-- ─────────── Module « Guide des tailles » ─────────── -->
+  <main id="vue-tailles" class="vue masque">
+    <!-- Un onglet par personne, construit au rendu : les pseudos viennent de
+         la base. Le « + » n'apparaît que sur son propre onglet. -->
+    <div id="onglets-tailles" class="segmented" role="tablist"></div>
+    <div id="contenu-tailles" class="contenu-anniversaires"></div>
+    <button class="fab" data-action="nouvelle-taille" aria-label="Nouvelle taille">+</button>
+  </main>
+
   <!-- ─────────── Module « Home team » ─────────── -->
   <main id="vue-personnel" class="vue masque">
     <!-- Masqués sur la liste des personnes : les onglets appartiennent à la

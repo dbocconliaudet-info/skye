@@ -14,6 +14,7 @@ import {
   rendreAnniversaires, ouvrirNouvelAnniversaire, construireOngletsMois,
 } from './anniversaires.js';
 import { rendrePersonnel, retourPersonnel } from './personnel.js';
+import { rendreTailles, ouvrirNouvelleTaille } from './tailles.js';
 import {
   sectionNotifications, synchroniserAbonnement, oublierCeTelephone,
 } from './notifications.js';
@@ -274,7 +275,7 @@ async function entrerDansApp() {
 }
 
 async function rechargerDonnees() {
-  const [espace, membres, taches, listes, articles, depenses, anniversaires,
+  const [espace, membres, taches, listes, articles, depenses, anniversaires, tailles,
     personnels, personnelsTaux, personnelsHeures, personnelsPaiements] =
     await Promise.all([
       db.espaceParId(etat.espaceId),
@@ -284,6 +285,7 @@ async function rechargerDonnees() {
       db.chargerArticles(etat.espaceId),
       db.chargerDepenses(etat.espaceId),
       db.chargerAnniversaires(etat.espaceId),
+      db.chargerTailles(etat.espaceId),
       db.chargerPersonnels(etat.espaceId),
       db.chargerTaux(etat.espaceId),
       db.chargerHeures(etat.espaceId),
@@ -304,6 +306,7 @@ async function rechargerDonnees() {
   etat.articles = articles;
   etat.depenses = depenses;
   etat.anniversaires = anniversaires;
+  etat.tailles = tailles;
   etat.personnels = personnels;
   etat.personnelsTaux = personnelsTaux;
   etat.personnelsHeures = personnelsHeures;
@@ -317,6 +320,7 @@ function rendreTout() {
   rendreCourses();
   rendreTricount();
   rendreAnniversaires();
+  rendreTailles();
   rendrePersonnel();
 }
 
@@ -348,6 +352,7 @@ const MODULES = [
   { cle: 'courses', titre: 'Courses', icone: '🛒' },
   { cle: 'tricount', titre: 'Tricount', icone: '💶' },
   { cle: 'anniversaires', titre: 'Anniversaires', icone: '🎂' },
+  { cle: 'tailles', titre: 'Guide des tailles', icone: '👕' },
   { cle: 'personnel', titre: 'Home team', icone: '🏡' },
 ];
 
@@ -507,6 +512,9 @@ function brancherEvenements() {
   // — Anniversaires
   construireOngletsMois();
   $('[data-action="nouvel-anniversaire"]').addEventListener('click', ouvrirNouvelAnniversaire);
+
+  // — Guide des tailles
+  $('[data-action="nouvelle-taille"]').addEventListener('click', ouvrirNouvelleTaille);
 
   // — Réglages
   $('[data-action="ouvrir-reglages"]').addEventListener('click', ouvrirReglages);

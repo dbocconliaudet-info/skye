@@ -898,6 +898,24 @@ input,select,textarea{font-family:var(--font-ui);font-size:16px;color:inherit;}
   .btn:active,.carte:active,.fab:active,.btn-reglages:active{transform:none;}
 }
 
+/* ══════════════════ Module « Guide des tailles » ══════════════════ */
+
+.tailles-info{margin:var(--space-2) var(--space-1) 0;}
+.taille{
+  display:flex;align-items:center;gap:var(--space-3);width:100%;text-align:left;
+  background:var(--surface);border:1px solid var(--line-2);border-radius:var(--radius-md);
+  padding:var(--space-3);margin-bottom:var(--space-2);box-shadow:var(--shadow-sm);
+}
+.taille-corps{flex:1;min-width:0;}
+.taille-type{font:var(--text-body);font-weight:600;color:var(--ink);margin:0;}
+.taille-precisions{font:var(--text-caption);color:var(--ink-3);margin:2px 0 0;}
+/* La taille est ce qu'on vient chercher : à droite, en grand, lisible d'un
+   coup d'œil en boutique. */
+.taille-valeur{
+  font:var(--text-h3);letter-spacing:var(--tracking-h3);color:var(--ink);
+  white-space:nowrap;flex-shrink:0;
+}
+
 /* ══════════════════ Écran large (usage secondaire sur ordinateur) ══════════ */
 
 @media (min-width:760px){
