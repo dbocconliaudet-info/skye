@@ -144,3 +144,6 @@ vite.config.ts.timestamp-*
 
 # Notes de travail personnelles : ne partent pas dans le dépôt public.
 memo-*.md
+
+# Briefs de cadrage (privés, hors dépôt public)
+brief/
