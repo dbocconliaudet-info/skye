@@ -43,11 +43,34 @@ MOIS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet",
 
 # ── Base de données ─────────────────────────────────────────────────────────
 
+def sorte_de_cle(cle):
+    """Le genre de clé reçu, sans rien en dévoiler : de quoi diagnostiquer un
+    refus de Supabase dans des journaux publics."""
+    for prefixe, nom in (("sb_secret_", "clé secrète (sb_secret_…)"),
+                         ("sb_publishable_", "clé PUBLIQUE (sb_publishable_…) — pas la bonne"),
+                         ("eyJ", "ancienne clé JWT (eyJ…)")):
+        if cle.startswith(prefixe):
+            return nom
+    return "clé de format inconnu"
+
+
+def verifier(r):
+    """Comme raise_for_status, mais en affichant d'abord la réponse de
+    Supabase : « Invalid API key », « Legacy API keys are disabled »… """
+    if not r.ok:
+        print(f"Supabase répond HTTP {r.status_code} : {r.text[:300]}")
+    r.raise_for_status()
+
+
 class Base:
     """Accès minimal à l'API REST de Supabase (PostgREST)."""
 
     def __init__(self, url, cle):
         self.racine = url.rstrip("/") + "/rest/v1/"
+        # Un espace ou un retour à la ligne pris au copier-coller suffit à
+        # faire refuser la clé.
+        cle = cle.strip()
+        print(f"clé Supabase reçue : {sorte_de_cle(cle)}, {len(cle)} caractères")
         self.entetes = {"apikey": cle, "Content-Type": "application/json"}
         # Les anciennes clés service_role sont des jetons JWT qu'il faut aussi
         # présenter en « Authorization » ; les nouvelles (sb_secret_…) non.
@@ -57,7 +80,7 @@ class Base:
     def lire(self, table, colonnes="*"):
         r = requests.get(self.racine + table, headers=self.entetes,
                          params={"select": colonnes}, timeout=30)
-        r.raise_for_status()
+        verifier(r)
         return r.json()
 
     def reserver_envoi(self, espace_id, jour, sorte):
@@ -69,14 +92,14 @@ class Base:
                      "Prefer": "resolution=ignore-duplicates,return=representation"},
             data=json.dumps({"espace_id": espace_id, "jour": jour.isoformat(), "sorte": sorte}),
             timeout=30)
-        r.raise_for_status()
+        verifier(r)
         return bool(r.json())
 
     def annuler_envoi(self, espace_id, jour, sorte):
         r = requests.delete(self.racine + "push_envois", headers=self.entetes, params={
             "espace_id": f"eq.{espace_id}", "jour": f"eq.{jour.isoformat()}",
             "sorte": f"eq.{sorte}"}, timeout=30)
-        r.raise_for_status()
+        verifier(r)
 
     def marquer_reussite(self, abonnement_id):
         requests.patch(self.racine + "push_abonnements", headers=self.entetes,
@@ -208,7 +231,7 @@ def envoyer(base, abonnement, contenu, cle_privee, sujet):
 
 def main():
     base = Base(os.environ["SUPABASE_URL"], os.environ["SUPABASE_SERVICE_ROLE_KEY"])
-    cle_privee = os.environ["VAPID_PRIVATE_KEY"]
+    cle_privee = os.environ["VAPID_PRIVATE_KEY"].strip()
     sujet = os.environ["VAPID_SUBJECT"]
     mode = os.environ.get("MODE") or "quotidien"
 
