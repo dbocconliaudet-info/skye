@@ -71,10 +71,22 @@ export async function synchroniserAbonnement() {
   } catch { /* hors ligne : on réessaiera à la prochaine ouverture */ }
 }
 
-/** Avant de se déconnecter : un téléphone déconnecté ne doit plus rien recevoir.
- *  À appeler tant que la session existe encore, la base l'exige pour effacer. */
+/**
+ * Avant de se déconnecter : un téléphone déconnecté ne doit plus rien recevoir
+ * — c'est peut-être un téléphone qu'on prête ou qu'on revend.
+ *
+ * On retire seulement sa ligne en base, sans désabonner le téléphone lui-même :
+ * à la reconnexion, `synchroniserAbonnement` la recrée toute seule, et les
+ * rappels reprennent sans avoir à réappuyer sur « Activer ». Si c'est un autre
+ * compte qui se connecte, la ligne est recréée à son nom.
+ *
+ * À appeler tant que la session existe encore, la base l'exige pour effacer.
+ */
 export async function oublierCeTelephone() {
-  try { await desactiver(); } catch { /* sans réseau : la ligne restera, sans gravité */ }
+  try {
+    const abonnement = await abonnementActuel();
+    if (abonnement) await db.supprimerAbonnementPush(abonnement.endpoint);
+  } catch { /* sans réseau : la ligne restera, sans gravité */ }
 }
 
 /** Section « Rappels » des réglages. */
