@@ -230,6 +230,14 @@ def envoyer(base, abonnement, contenu, cle_privee, sujet):
 
 
 def main():
+    manquants = [nom for nom in ("SUPABASE_SERVICE_ROLE_KEY", "VAPID_PRIVATE_KEY")
+                 if not os.environ.get(nom, "").strip()]
+    if manquants:
+        print("Secret(s) GitHub vide(s) ou introuvable(s) : " + ", ".join(manquants))
+        print("À vérifier dans Settings › Secrets and variables › Actions, onglet Secrets,")
+        print("section « Repository secrets » : le nom doit être exactement celui-ci.")
+        return 1
+
     base = Base(os.environ["SUPABASE_URL"], os.environ["SUPABASE_SERVICE_ROLE_KEY"])
     cle_privee = os.environ["VAPID_PRIVATE_KEY"].strip()
     sujet = os.environ["VAPID_SUBJECT"]
