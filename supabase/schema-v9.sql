@@ -73,3 +73,15 @@ create table if not exists public.push_envois (
 
 alter table public.push_envois enable row level security;
 revoke all on public.push_envois from anon, authenticated;
+
+-- ---------------------------------------------------------------------------
+--  Les droits du script d'envoi
+-- ---------------------------------------------------------------------------
+--  La clé service_role passe outre les règles RLS, mais pas les droits sur
+--  les tables : ce projet ne les accorde pas d'office aux tables nouvelles.
+--  On les donne donc nommément, au plus juste de ce que lit et écrit
+--  scripts/rappels.py.
+
+grant select, update, delete on public.push_abonnements to service_role;
+grant select, insert, delete on public.push_envois      to service_role;
+grant select on public.espaces, public.membres, public.anniversaires to service_role;
