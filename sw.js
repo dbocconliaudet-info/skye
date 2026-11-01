@@ -11,7 +11,7 @@
  * URL : elles, on les sert depuis le cache en priorité.
  */
 
-const VERSION = 'skye-v12';
+const VERSION = 'skye-v13';
 const COQUILLE = [
   './',
   './index.html',
@@ -95,7 +95,7 @@ self.addEventListener('fetch', (e) => {
 // ── Notifications ──────────────────────────────────────────────────────────
 //
 // Le message arrive chiffré d'Apple (ou Google, Mozilla), déjà déchiffré ici :
-// `{ titre, corps, tag, url }`, écrit par scripts/rappels.py. iOS exige qu'une
+// `{ titre, corps, tag, url }`, écrit par scripts/rappels.py ou la fonction prevenir-conjoint. iOS exige qu'une
 // notification s'affiche à chaque réception — c'est la condition pour garder
 // le droit d'en recevoir — d'où le texte de secours si le contenu est illisible.
 

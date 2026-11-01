@@ -10,8 +10,9 @@ export const SUPABASE_CLE_PUBLIQUE = 'sb_publishable_gLIfjeGROrxNEn_V36Uj1Q_Yp5b
 // Clé publique des notifications (VAPID). Publique elle aussi : le téléphone
 // la présente à Apple pour dire « n'accepte que les messages signés par la
 // clé privée qui va avec ». La clé privée, elle, ne vit que dans les secrets
-// GitHub (VAPID_PRIVATE_KEY) — jamais dans ce dépôt.
-export const VAPID_CLE_PUBLIQUE = 'BH94BRCc0Me0NAFz-E_ezu6c2cOuwrRYSAONLj02Z6MPdDVptTDeA9RSPzEtxmMkNqNhjDZbPeet9Qj7s8FAEFk';
+// GitHub et Supabase (VAPID_PRIVATE_KEY) — jamais dans ce dépôt. Changer de
+// paire : voir aussi supabase/functions/prevenir-conjoint/index.ts.
+export const VAPID_CLE_PUBLIQUE = 'BCpxUk3GcfeCXHRXV9M8QVE8iLJscqIkeTgYVHJ1AgF4pPlly757f5mq6vywqgRmjcFtX4kI1dvXWa_TNtrLvBg';
 
 // Catégories de tâches (§6.1 du cahier des charges).
 // La clé est stockée en base, le libellé est affiché.

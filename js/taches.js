@@ -319,8 +319,24 @@ async function appliquer(id, patch) {
     const i = etat.taches.findIndex((x) => x.id === id);
     if (i !== -1) etat.taches[i] = maj;
     rendreTaches();
+    return true;
   } catch (e) {
     toast(`Impossible d’enregistrer : ${e.message}`);
+    return false;
+  }
+}
+
+/** Le toast dit ce qui s'est réellement passé : mieux vaut « pas prévenu » que
+ *  laisser croire à tort que l'autre est au courant. */
+async function prevenir(t, conjoint) {
+  try {
+    const { envoyes, raison } = await db.prevenirConjoint(t.id);
+    if (envoyes) toast(`Et voilà, tadam ! ${conjoint.pseudo} est au courant`);
+    else if (raison === 'deja_prevenu') toast('Et voilà, tadam !');
+    else if (raison === 'pas_de_telephone') toast(`C’est noté, mais ${conjoint.pseudo} n’a pas activé les notifications`);
+    else toast(`C’est noté, mais impossible de prévenir ${conjoint.pseudo}`);
+  } catch {
+    toast(`C’est noté, mais impossible de prévenir ${conjoint.pseudo}`);
   }
 }
 
@@ -331,21 +347,30 @@ function demanderNoteDeCloture(t) {
     placeholder: 'Ex : offert une carafe, envoyé le 12/07…',
   });
 
+  const conjoint = etat.membres.find((m) => m.id !== etat.membreId);
+  const casePrevenir = el('input', { type: 'checkbox' });
+
   const valider = async () => {
+    const aPrevenir = conjoint && casePrevenir.checked;
     fermerFeuille();
-    await appliquer(t.id, {
+    const enregistre = await appliquer(t.id, {
       statut: 'fait',
       note_de_cloture: zone.value.trim() || null,
       termine_par: etat.membreId,
       termine_le: new Date().toISOString(),
     });
-    toast('Et voilà, tadam !');
+    if (!enregistre) return;
+    if (aPrevenir) await prevenir(t, conjoint);
+    else toast('Et voilà, tadam !');
   };
 
   ouvrirFeuille(el('div', {},
     el('h2', {}, 'C’est fait !'),
     el('label', { class: 'champ' },
       el('span', {}, 'Un mot à laisser ? (facultatif)'), zone),
+    conjoint ? el('label', { class: 'bascule' }, casePrevenir,
+      el('span', {}, `Prévenir ${conjoint.pseudo}`,
+        el('span', { class: 'sous' }, 'Par une notification, avec le mot ci-dessus s’il y en a un.'))) : null,
     el('button', { class: 'btn btn-secondaire', onclick: valider }, 'Valider'),
     el('button', { class: 'btn btn-fantome', onclick: fermerFeuille }, 'Annuler'),
   ));

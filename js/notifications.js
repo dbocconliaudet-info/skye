@@ -1,8 +1,9 @@
 // Notifications (Web Push) : abonner ce téléphone, ou le désabonner.
 //
-// L'envoi ne se fait pas d'ici : c'est un script quotidien sur GitHub Actions
-// qui lit les anniversaires et écrit aux téléphones inscrits dans
-// `push_abonnements` (voir scripts/rappels.py).
+// L'envoi ne se fait pas d'ici. Deux expéditeurs écrivent aux téléphones inscrits
+// dans `push_abonnements`, avec la même clé : le script quotidien sur GitHub
+// Actions pour les anniversaires (scripts/rappels.py), et une fonction Supabase
+// pour prévenir l'autre d'une tâche terminée (supabase/functions/prevenir-conjoint).
 //
 // Sur iPhone, trois conditions, toutes imposées par Apple :
 // - iOS 16.4 ou plus récent ;
@@ -35,6 +36,25 @@ async function abonnementActuel() {
   return enregistrement.pushManager.getSubscription();
 }
 
+/** Le téléphone est-il inscrit avec une autre clé que celle de l'app ? Ça arrive
+ *  quand on change de paire de clés : Apple refuserait alors tous les envois. */
+function inscritAvecAncienneCle(abonnement) {
+  const cle = abonnement.options?.applicationServerKey;
+  if (!cle) return false;
+  const attendue = octetsDepuisBase64Url(VAPID_CLE_PUBLIQUE);
+  const actuelle = new Uint8Array(cle);
+  return actuelle.length !== attendue.length || actuelle.some((o, i) => o !== attendue[i]);
+}
+
+async function inscrire() {
+  const enregistrement = await navigator.serviceWorker.ready;
+  const abonnement = await enregistrement.pushManager.subscribe({
+    userVisibleOnly: true,
+    applicationServerKey: octetsDepuisBase64Url(VAPID_CLE_PUBLIQUE),
+  });
+  await db.enregistrerAbonnementPush(etat.espaceId, etat.membreId, abonnement);
+}
+
 async function activer() {
   // Doit rester la première attente : iOS n'accepte la demande que si elle
   // suit immédiatement l'appui sur le bouton.
@@ -42,12 +62,11 @@ async function activer() {
   if (permission !== 'granted') {
     throw new Error('notifications refusées sur ce téléphone');
   }
-  const enregistrement = await navigator.serviceWorker.ready;
-  const abonnement = await enregistrement.pushManager.subscribe({
-    userVisibleOnly: true,
-    applicationServerKey: octetsDepuisBase64Url(VAPID_CLE_PUBLIQUE),
-  });
-  await db.enregistrerAbonnementPush(etat.espaceId, etat.membreId, abonnement);
+  // Un téléphone inscrit avec l'ancienne clé doit d'abord se désinscrire, sinon
+  // le navigateur refuse la nouvelle inscription.
+  const existant = await abonnementActuel();
+  if (existant && inscritAvecAncienneCle(existant)) await existant.unsubscribe();
+  await inscrire();
 }
 
 async function desactiver() {
@@ -62,12 +81,23 @@ async function desactiver() {
  * base. Le navigateur renouvelle parfois l'abonnement de lui-même, et le
  * script d'envoi efface ceux qu'Apple déclare périmés : sans ce rappel, un
  * téléphone pourrait cesser de recevoir les rappels sans que rien ne l'affiche.
+ *
+ * Après un changement de clé, on le réinscrit aussi. Si iOS refuse de le faire
+ * sans appui sur un bouton, le téléphone apparaît « non inscrit » dans les
+ * réglages, et « Activer les rappels » y remédie.
  */
 export async function synchroniserAbonnement() {
   try {
     if (!estPrisEnCharge() || Notification.permission !== 'granted') return;
     const abonnement = await abonnementActuel();
-    if (abonnement) await db.enregistrerAbonnementPush(etat.espaceId, etat.membreId, abonnement);
+    if (!abonnement) return;
+    if (inscritAvecAncienneCle(abonnement)) {
+      await db.supprimerAbonnementPush(abonnement.endpoint);
+      await abonnement.unsubscribe();
+      await inscrire();
+      return;
+    }
+    await db.enregistrerAbonnementPush(etat.espaceId, etat.membreId, abonnement);
   } catch { /* hors ligne : on réessaiera à la prochaine ouverture */ }
 }
 
@@ -112,13 +142,17 @@ export function sectionNotifications() {
       return;
     }
 
-    const abonne = Boolean(await abonnementActuel()) && Notification.permission === 'granted';
+    const actuel = await abonnementActuel();
+    const abonne = Boolean(actuel) && !inscritAvecAncienneCle(actuel)
+      && Notification.permission === 'granted';
 
     hote.append(el('p', { class: 'feuille-info' }, abonne
       ? 'Rappels activés sur ce téléphone : chaque matin vers 8 h 30 les anniversaires du jour, '
-        + 'et pour ceux marqués 🎁 un rappel 3 semaines puis 1 semaine avant.'
-      : 'Reçois chaque matin vers 8 h 30 les anniversaires du jour, et pour ceux marqués 🎁 '
-        + 'un rappel 3 semaines puis 1 semaine avant. À activer sur chaque téléphone.'));
+        + 'pour ceux marqués 🎁 un rappel 3 semaines puis 1 semaine avant, '
+        + 'et les tâches terminées dont on veut te prévenir.'
+      : 'Reçois chaque matin vers 8 h 30 les anniversaires du jour, pour ceux marqués 🎁 '
+        + 'un rappel 3 semaines puis 1 semaine avant, et les tâches terminées dont on veut '
+        + 'te prévenir. À activer sur chaque téléphone.'));
 
     const bouton = el('button', {
       class: 'btn btn-secondaire',
