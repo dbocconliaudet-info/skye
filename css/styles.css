@@ -466,9 +466,12 @@ input,select,textarea{font-family:var(--font-ui);font-size:16px;color:inherit;}
 .rangee.vierge .btn-effacer,.rangee.vierge .btn-photo{visibility:hidden;}
 /* Pâle tant qu'aucune photo ne correspond (toucher = en prendre une), vif
    dès qu'une photo correspond (toucher = la voir). */
+/* Une large marge le sépare de la croix : viser la photo ne doit jamais
+   effacer la ligne. */
 .btn-photo{
   flex-shrink:0;border:none;background:transparent;font-size:17px;line-height:1;
-  padding:var(--space-2) 0 var(--space-2) var(--space-3);opacity:.3;filter:grayscale(1);
+  padding:var(--space-2) var(--space-2) var(--space-2) var(--space-3);margin-right:var(--space-5);
+  opacity:.3;filter:grayscale(1);
 }
 .btn-photo.a-photo{opacity:1;filter:none;}
 .photo-produit{
@@ -898,6 +901,13 @@ input,select,textarea{font-family:var(--font-ui);font-size:16px;color:inherit;}
   max-width:86vw;text-align:center;
 }
 .toast.visible{opacity:1;transform:translate(-50%,0);}
+/* Seul un toast qui porte un bouton capte le doigt : les autres laissent
+   passer les touches vers ce qu'ils recouvrent. */
+.toast.visible.avec-action{pointer-events:auto;}
+.toast-action{
+  border:none;background:transparent;color:var(--surface);font:inherit;
+  text-decoration:underline;margin-left:var(--space-3);padding:var(--space-1) 0;
+}
 
 /* ══════════════════ Mouvement réduit ══════════════════ */
 /* La charte l'exige. Les transitions d'état restent, mais raccourcies : les

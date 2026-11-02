@@ -434,11 +434,27 @@ function effacerRangee(rangee, boite, liste, magasin) {
 
   const article = etat.articles.find((a) => a.id === id) || null;
   etat.articles = etat.articles.filter((a) => a.id !== id);
-  db.supprimerArticle(id).catch((e) => {
-    if (article) etat.articles.push(article);
-    toast(`Suppression impossible : ${e.message}`);
+  db.supprimerArticle(id)
+    .then(() => {
+      if (article) toast(`« ${article.nom} » supprimé`, { action: 'Annuler', auClic: () => restaurer(article) });
+    })
+    .catch((e) => {
+      if (article) etat.articles.push(article);
+      toast(`Suppression impossible : ${e.message}`);
+      rendreCourses();
+    });
+}
+
+/** « Annuler » après une suppression : l'article revient tel quel — même
+ *  identifiant, même date, donc à sa place dans la liste. */
+async function restaurer(article) {
+  try {
+    const revenu = await db.creerArticle(article);
+    etat.articles.push(revenu);
     rendreCourses();
-  });
+  } catch (e) {
+    toast(`Impossible de rétablir : ${e.message}`);
+  }
 }
 
 /** La liste ne reste jamais sans sa ligne d'attente : la page ne doit jamais

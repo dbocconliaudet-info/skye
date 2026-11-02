@@ -34,12 +34,28 @@ export function montrer(noeud, visible = true) {
 // ── Toast ──────────────────────────────────────────────────────────────────
 
 let minuteurToast;
-export function toast(message) {
+/**
+ * Message éphémère en bas de l'écran. Avec `action`, il porte un bouton
+ * — « Annuler » après une suppression — et reste un peu plus longtemps,
+ * le temps de le toucher.
+ */
+export function toast(message, { action, auClic } = {}) {
   const t = $('#toast');
   t.textContent = message;
+  t.classList.toggle('avec-action', Boolean(action));
+  if (action) {
+    t.append(el('button', {
+      class: 'toast-action', type: 'button',
+      onclick: () => {
+        clearTimeout(minuteurToast);
+        t.classList.remove('visible', 'avec-action');
+        auClic();
+      },
+    }, action));
+  }
   t.classList.add('visible');
   clearTimeout(minuteurToast);
-  minuteurToast = setTimeout(() => t.classList.remove('visible'), 2600);
+  minuteurToast = setTimeout(() => t.classList.remove('visible', 'avec-action'), action ? 5000 : 2600);
 }
 
 // ── Feuille modale ─────────────────────────────────────────────────────────
