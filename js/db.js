@@ -215,6 +215,32 @@ export const supprimerArticle = async (id) =>
 export const articlesDeListe = async (listeId) =>
   ok(await sb.from('articles_courses').select('*').eq('liste_id', listeId).order('cree_le'));
 
+// Photos des produits : la ligne en base, le fichier dans Storage (bucket privé,
+// un dossier par espace). Seuls le nom et le chemin sont chargés avec le
+// reste ; une image n'est téléchargée qu'au moment de l'afficher.
+const BUCKET_PHOTOS = 'photos-produits';
+
+export const chargerPhotos = async (espaceId) =>
+  ok(await sb.from('photos_produits').select('*').eq('espace_id', espaceId));
+
+export const creerPhoto = async (photo) =>
+  ok(await sb.from('photos_produits').insert(photo).select().single());
+
+export const majPhoto = async (id, patch) =>
+  ok(await sb.from('photos_produits').update(patch).eq('id', id).select().single());
+
+export const supprimerPhoto = async (id) =>
+  ok(await sb.from('photos_produits').delete().eq('id', id));
+
+export const envoyerFichierPhoto = async (chemin, blob) =>
+  ok(await sb.storage.from(BUCKET_PHOTOS).upload(chemin, blob, { contentType: 'image/jpeg' }));
+
+export const telechargerPhoto = async (chemin) =>
+  ok(await sb.storage.from(BUCKET_PHOTOS).download(chemin));
+
+export const supprimerFichierPhoto = async (chemin) =>
+  ok(await sb.storage.from(BUCKET_PHOTOS).remove([chemin]));
+
 // La table `dictionnaire_rayons` existe toujours en base mais n'est plus lue :
 // les rayons ont cédé la place aux quatre magasins, qui se choisissent par le
 // geste — on écrit dans un encadré — et n'ont donc rien à deviner.
@@ -389,7 +415,7 @@ export const prevenirConjoint = async (tacheId, sorte) =>
 export function abonner(espaceId, auChangement) {
   const canal = sb.channel(`espace-${espaceId}`);
 
-  for (const table of ['taches', 'listes_courses', 'articles_courses', 'membres',
+  for (const table of ['taches', 'listes_courses', 'articles_courses', 'photos_produits', 'membres',
     'depenses', 'anniversaires', 'tailles', 'personnels', 'personnels_taux',
     'personnels_heures', 'personnels_paiements']) {
     canal.on(

@@ -275,7 +275,7 @@ async function entrerDansApp() {
 }
 
 async function rechargerDonnees() {
-  const [espace, membres, taches, listes, articles, depenses, anniversaires, tailles,
+  const [espace, membres, taches, listes, articles, photos, depenses, anniversaires, tailles,
     personnels, personnelsTaux, personnelsHeures, personnelsPaiements] =
     await Promise.all([
       db.espaceParId(etat.espaceId),
@@ -283,6 +283,9 @@ async function rechargerDonnees() {
       db.chargerTaches(etat.espaceId),
       db.chargerListes(etat.espaceId),
       db.chargerArticles(etat.espaceId),
+      // Un accessoire : si les photos ne se chargent pas, le reste de l'app
+      // doit s'afficher quand même.
+      db.chargerPhotos(etat.espaceId).catch(() => []),
       db.chargerDepenses(etat.espaceId),
       db.chargerAnniversaires(etat.espaceId),
       db.chargerTailles(etat.espaceId),
@@ -304,6 +307,7 @@ async function rechargerDonnees() {
   etat.taches = taches;
   etat.listes = listes;
   etat.articles = articles;
+  etat.photos = photos;
   etat.depenses = depenses;
   etat.anniversaires = anniversaires;
   etat.tailles = tailles;

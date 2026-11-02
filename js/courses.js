@@ -13,6 +13,7 @@ import {
 import { etat, listeParId, listePermanente } from './etat.js';
 import { MAGASINS_DEFAUT, NB_MAGASINS } from './config.js';
 import * as db from './db.js';
+import { boutonPhoto, photosPour } from './photos.js';
 
 const VUE_HISTORIQUE = 'historique';
 
@@ -206,7 +207,7 @@ function carteMagasin(liste, magasin) {
     if (!produits.length) {
       apercu.append(el('li', { class: 'apercu-vide' }, 'Rien pour l’instant'));
     } else {
-      for (const a of produits) apercu.append(el('li', {}, a.nom));
+      for (const a of produits) apercu.append(el('li', {}, a.nom, photosPour(a.nom).length ? ' 📷' : ''));
     }
     mesurerApercu(apercu);
   };
@@ -324,7 +325,10 @@ function ligne(article, liste, magasin, boite) {
 
   // La ligne d'attente ne montre pas de croix : il n'y a rien à y effacer, et
   // une croix sur une ligne vide ne voudrait rien dire.
+  // Après un ajout ou une suppression de photo, toute la page se redessine :
+  // une même photo peut valoir pour plusieurs lignes.
   const rangee = el('div', { class: article ? 'rangee' : 'rangee vierge' }, champ,
+    boutonPhoto(champ, rendreCourses),
     el('button', {
       class: 'btn-effacer', type: 'button',
       'aria-label': article ? `Supprimer ${article.nom}` : 'Supprimer cette ligne',

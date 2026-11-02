@@ -21,6 +21,7 @@ export const etat = {
   taches: [],
   listes: [],
   articles: [],
+  photos: [],               // photos des produits, rattachées à un nom (js/photos.js)
   depenses: [],
   anniversaires: [],
   tailles: [],
@@ -56,7 +57,7 @@ export function oublierSession() {
   Object.assign(etat, {
     espaceId: null, espaceNom: '', lienInvitation: '', dateMariage: '',
     dernierMomentADeux: '', magasins: [], membreId: null,
-    membres: [], taches: [], listes: [], articles: [], depenses: [], anniversaires: [], tailles: [],
+    membres: [], taches: [], listes: [], articles: [], photos: [], depenses: [], anniversaires: [], tailles: [],
     personnels: [], personnelsTaux: [], personnelsHeures: [], personnelsPaiements: [],
     ongletTailles: null, listeActiveId: null, magasinOuvert: null, personnelOuvert: null,
     lundiAffiche: '', moisExport: '',

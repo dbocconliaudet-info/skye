@@ -463,7 +463,21 @@ input,select,textarea{font-family:var(--font-ui);font-size:16px;color:inherit;}
 }
 .rangee:focus-within .btn-effacer{color:var(--ink-3);}
 /* La place reste prise pour que le champ ne s'élargisse pas dès qu'on écrit. */
-.rangee.vierge .btn-effacer{visibility:hidden;}
+.rangee.vierge .btn-effacer,.rangee.vierge .btn-photo{visibility:hidden;}
+/* Pâle tant qu'aucune photo ne correspond (toucher = en prendre une), vif
+   dès qu'une photo correspond (toucher = la voir). */
+.btn-photo{
+  flex-shrink:0;border:none;background:transparent;font-size:17px;line-height:1;
+  padding:var(--space-2) 0 var(--space-2) var(--space-3);opacity:.3;filter:grayscale(1);
+}
+.btn-photo.a-photo{opacity:1;filter:none;}
+.photo-produit{
+  display:block;width:100%;max-height:60vh;min-height:120px;object-fit:contain;
+  border-radius:var(--radius-md);background:var(--line-2);
+}
+.photo-legende{font:var(--text-caption);color:var(--ink-3);margin:var(--space-2) 0;}
+.photo-bloc{margin-bottom:var(--space-4);}
+.photo-actions{display:flex;gap:var(--space-2);}
 /* Le champ d'ajout d'un encadré, lui, se voit : il occupe la place du bouton
    qu'il remplace et doit dire où le doigt a atterri. */
 .ligne-produit.ajout{
