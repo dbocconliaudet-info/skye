@@ -376,10 +376,11 @@ export const enregistrerAbonnementPush = async (espaceId, membreId, abonnement) 
 export const supprimerAbonnementPush = async (endpoint) =>
   ok(await sb.from('push_abonnements').delete().eq('endpoint', endpoint));
 
-/** Prévient l'autre membre qu'une tâche est terminée. Renvoie le nombre de
- *  téléphones atteints, et `raison` quand il n'y en a aucun. */
-export const prevenirConjoint = async (tacheId) =>
-  ok(await sb.functions.invoke('prevenir-conjoint', { body: { tache_id: tacheId } }));
+/** Prévient l'autre membre au sujet d'une tâche : `sorte` vaut 'creee',
+ *  'relance' ou 'fait'. Renvoie le nombre de téléphones atteints, et `raison`
+ *  quand il n'y en a aucun. */
+export const prevenirConjoint = async (tacheId, sorte) =>
+  ok(await sb.functions.invoke('prevenir-conjoint', { body: { tache_id: tacheId, sorte } }));
 
 // ── Temps réel ─────────────────────────────────────────────────────────────
 

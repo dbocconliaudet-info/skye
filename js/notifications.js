@@ -3,7 +3,8 @@
 // L'envoi ne se fait pas d'ici. Deux expéditeurs écrivent aux téléphones inscrits
 // dans `push_abonnements`, avec la même clé : le script quotidien sur GitHub
 // Actions pour les anniversaires (scripts/rappels.py), et une fonction Supabase
-// pour prévenir l'autre d'une tâche terminée (supabase/functions/prevenir-conjoint).
+// pour prévenir l'autre d'une tâche ajoutée, à faire ou terminée
+// (supabase/functions/prevenir-conjoint).
 //
 // Sur iPhone, trois conditions, toutes imposées par Apple :
 // - iOS 16.4 ou plus récent ;
@@ -148,11 +149,11 @@ export function sectionNotifications() {
 
     hote.append(el('p', { class: 'feuille-info' }, abonne
       ? 'Rappels activés sur ce téléphone : chaque matin vers 8 h 30 les anniversaires du jour, '
-        + 'pour ceux marqués 🎁 un rappel 3 semaines puis 1 semaine avant, '
-        + 'et les tâches terminées dont on veut te prévenir.'
+        + 'pour ceux marqués 🎁 un rappel 3 semaines puis 1 semaine avant, les tâches récurrentes '
+        + 'qui réapparaissent, et ce dont l’autre veut te prévenir.'
       : 'Reçois chaque matin vers 8 h 30 les anniversaires du jour, pour ceux marqués 🎁 '
-        + 'un rappel 3 semaines puis 1 semaine avant, et les tâches terminées dont on veut '
-        + 'te prévenir. À activer sur chaque téléphone.'));
+        + 'un rappel 3 semaines puis 1 semaine avant, les tâches récurrentes qui réapparaissent, '
+        + 'et ce dont l’autre veut te prévenir. À activer sur chaque téléphone.'));
 
     const bouton = el('button', {
       class: 'btn btn-secondaire',

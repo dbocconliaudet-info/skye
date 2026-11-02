@@ -1,4 +1,6 @@
-"""Rappels du matin : anniversaires du jour et cadeaux à prévoir.
+"""Rappels du matin : anniversaires du jour, cadeaux à prévoir et tâches
+récurrentes qui réapparaissent (celles où « Prévenir quand elle réapparaît »
+est coché).
 
 Lancé chaque matin par GitHub Actions (.github/workflows/rappels.yml). Lit la
 base Supabase avec la clé service_role, compose une notification par membre et
@@ -77,9 +79,9 @@ class Base:
         if cle.startswith("eyJ"):
             self.entetes["Authorization"] = f"Bearer {cle}"
 
-    def lire(self, table, colonnes="*"):
+    def lire(self, table, colonnes="*", filtres=None):
         r = requests.get(self.racine + table, headers=self.entetes,
-                         params={"select": colonnes}, timeout=30)
+                         params={"select": colonnes, **(filtres or {})}, timeout=30)
         verifier(r)
         return r.json()
 
@@ -137,6 +139,96 @@ def avec_age(nom, n):
     return f"{nom} ({n} ans)" if n else nom
 
 
+# ── Tâches récurrentes ──────────────────────────────────────────────────────
+#
+# Même calcul que l'app (js/taches.js et js/ui.js), à garder identique : c'est
+# lui qui décide du jour où la carte apparaît sur le board.
+
+def ajouter_mois(d, nb):
+    """Comme setMonth en JavaScript : un jour qui n'existe pas déborde sur le
+    mois suivant (31 mars moins un mois donne le 3 mars)."""
+    total = d.year * 12 + d.month - 1 + nb
+    return date(total // 12, total % 12 + 1, 1) + timedelta(days=d.day - 1)
+
+
+def ajouter_delai(d, nb, unite):
+    if unite == "jour":
+        return d + timedelta(days=nb)
+    if unite == "semaine":
+        return d + timedelta(weeks=nb)
+    if unite == "mois":
+        return ajouter_mois(d, nb)
+    if unite == "annee":
+        return ajouter_mois(d, 12 * nb)
+    return d
+
+
+def prochaine_echeance(d, rec):
+    """Échéance suivante d'une tâche récurrente : « tous les mois le 31 »
+    tombe au 28 ou au 30 quand le 31 n'existe pas."""
+    n = max(1, int(rec.get("intervalle") or 1))
+    if rec.get("frequence") == "jour":
+        return d + timedelta(days=n)
+    if rec.get("frequence") == "semaine":
+        return d + timedelta(weeks=n)
+    mois_en_plus = 12 * n if rec.get("frequence") == "annee" else n
+    jour_voulu = (int(rec.get("jour") or 0) or d.day) if rec.get("frequence") == "mois" else d.day
+    cible = ajouter_mois(date(d.year, d.month, 1), mois_en_plus)
+    return date_dans_annee(cible.year, cible.month, jour_voulu)
+
+
+def date_apparition(echeance, rec):
+    if not rec or not rec.get("delai_nb"):
+        return echeance
+    return ajouter_delai(echeance, -int(rec["delai_nb"]), rec.get("delai_unite") or "jour")
+
+
+def taches_qui_reapparaissent(taches, aujourdhui):
+    """Les tâches à signaler ce matin. Que l'occurrence existe déjà (l'un de
+    vous a ouvert l'app avant 8 h 30) ou pas encore (personne ne l'a ouverte),
+    le résultat est le même : on refait le calcul de l'app."""
+    series = {}
+    for t in taches:
+        rec = t.get("recurrence") or {}
+        if rec.get("serie") and t.get("date_limite"):
+            series.setdefault(rec["serie"], []).append(t)
+
+    a_signaler = []
+    for lot in series.values():
+        # Les occurrences déjà créées.
+        for t in lot:
+            echeance = date.fromisoformat(t["date_limite"])
+            if (t["recurrence"].get("prevenir") and t["statut"] != "fait"
+                    and not t.get("devenu_sans_objet")
+                    and date_apparition(echeance, t["recurrence"]) == aujourdhui):
+                a_signaler.append({**t, "echeance": echeance})
+
+        # Celles que l'app créera à sa prochaine ouverture.
+        modele = max(lot, key=lambda t: t["date_limite"])
+        rec = modele["recurrence"]
+        echeance = date.fromisoformat(modele["date_limite"])
+        for _ in range(24):  # même garde-fou que l'app
+            suivante = prochaine_echeance(echeance, rec)
+            apparition = date_apparition(suivante, rec)
+            if suivante <= echeance or apparition > aujourdhui:
+                break
+            if rec.get("prevenir") and apparition == aujourdhui:
+                a_signaler.append({**modele, "echeance": suivante})
+            echeance = suivante
+    return a_signaler
+
+
+def ligne_tache(t, aujourdhui):
+    if t["echeance"] == aujourdhui:
+        return f"🔁 {t['titre']} : pour aujourd’hui"
+    return f"🔁 {t['titre']} : pour le {t['echeance'].day} {MOIS[t['echeance'].month - 1]}"
+
+
+def concerne(t, membre_id):
+    """Assignée à ce membre, ou aux deux."""
+    return t.get("assigne_aux_deux") or not t.get("assigne_a") or t["assigne_a"] == membre_id
+
+
 # ── Composition ─────────────────────────────────────────────────────────────
 
 def dates_de_l_espace(espace, membres, anniversaires):
@@ -187,9 +279,14 @@ def lignes_pour(membre_id, dates, aujourdhui):
 
 
 def message(lignes, aujourdhui):
-    titre = "Anniversaire aujourd’hui" if not lignes[0].startswith("🎁") else "Cadeau à prévoir"
     if len(lignes) > 1:
         titre = "Skye · rappels du jour"
+    elif lignes[0].startswith("🎁"):
+        titre = "Cadeau à prévoir"
+    elif lignes[0].startswith("🔁"):
+        titre = "Tâche à faire"
+    else:
+        titre = "Anniversaire aujourd’hui"
     return {
         "titre": titre,
         "corps": "\n".join(lignes),
@@ -262,6 +359,9 @@ def main():
     espaces = base.lire("espaces", "id,date_mariage_pacs")
     membres = base.lire("membres", "id,espace_id,pseudo,date_naissance")
     anniversaires = base.lire("anniversaires", "espace_id,nom,jour,mois,annee,prevoir_cadeau")
+    taches = base.lire("taches",
+                       "espace_id,titre,assigne_a,assigne_aux_deux,statut,devenu_sans_objet,date_limite,recurrence",
+                       {"recurrence": "not.is.null"})
 
     echecs = 0
     for espace in espaces:
@@ -272,15 +372,21 @@ def main():
             espace,
             [m for m in membres if m["espace_id"] == espace["id"]],
             [a for a in anniversaires if a["espace_id"] == espace["id"]])
+        a_faire = taches_qui_reapparaissent(
+            [t for t in taches if t["espace_id"] == espace["id"]], aujourdhui)
 
         a_envoyer = []
         for abonnement in abonnes:
             lignes = lignes_pour(abonnement["membre_id"], dates, aujourdhui)
+            lignes += [ligne_tache(t, aujourdhui) for t in a_faire
+                       if concerne(t, abonnement["membre_id"])]
             if lignes:
                 a_envoyer.append((abonnement, message(lignes, aujourdhui)))
         if not a_envoyer:
             continue
 
+        # « anniversaires » est un nom historique : il couvre tout le rappel du
+        # matin, tâches comprises. Le changer ferait renvoyer celui du jour.
         if not base.reserver_envoi(espace["id"], aujourdhui, "anniversaires"):
             print("espace déjà notifié aujourd'hui, rien à faire")
             continue

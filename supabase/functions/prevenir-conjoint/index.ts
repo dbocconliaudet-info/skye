@@ -1,14 +1,21 @@
-// Prévient l'autre membre de l'espace qu'une tâche vient d'être terminée.
+// Prévient l'autre membre de l'espace au sujet d'une tâche. Trois sortes :
+//   creee    je viens de l'ajouter
+//   relance  petit rappel : elle n'est pas encore faite
+//   fait     je viens de la terminer (sorte par défaut)
 //
-// Appelée par l'app (js/taches.js) quand « Prévenir » est coché. À déployer dans
-// Supabase › Edge Functions, sous le nom « prevenir-conjoint ».
+// Appelée par l'app (js/taches.js). À déployer dans Supabase › Edge Functions,
+// sous le nom « prevenir-conjoint ».
 //
 // Secret à créer dans Supabase › Edge Functions › Secrets :
 //   VAPID_PRIVATE_KEY  la même valeur que le secret GitHub du même nom
 //
-// L'app n'envoie que l'identifiant de la tâche : le texte est composé ici, et le
-// destinataire déduit d'ici. Un membre ne peut donc écrire qu'à l'autre membre
-// de son espace, au sujet d'une tâche qu'il vient lui-même de terminer.
+// L'app n'envoie que l'identifiant de la tâche et la sorte : le texte est composé
+// ici, et le destinataire déduit d'ici. Un membre ne peut donc écrire qu'à l'autre
+// membre de son espace, au sujet d'une tâche de cet espace.
+//
+// Les réapparitions des tâches récurrentes ne passent pas par ici : elles partent
+// avec les rappels du matin (scripts/rappels.py), puisque personne n'appuie sur
+// rien à ce moment-là.
 
 import { createClient } from "npm:@supabase/supabase-js@2.118.0";
 import * as webpush from "jsr:@negrel/webpush@0.5.0";
@@ -19,6 +26,9 @@ const VAPID_SUBJECT = "https://dbocconliaudet-info.github.io";
 
 // Combien de temps Apple garde la notification pour un téléphone hors ligne.
 const DUREE_DE_VIE = 24 * 3600;
+
+const MOIS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet",
+  "août", "septembre", "octobre", "novembre", "décembre"];
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -59,6 +69,48 @@ function clesVapid(): webpush.ExportedVapidKeys {
   };
 }
 
+/** « 12 novembre » depuis « 2026-11-12 ». */
+function formaterJour(iso: string): string {
+  const [, m, j] = iso.split("-").map(Number);
+  return `${j} ${MOIS[m - 1]}`;
+}
+
+interface Tache {
+  id: string;
+  titre: string;
+  note_de_cloture: string | null;
+  statut: string;
+  devenu_sans_objet: boolean;
+  date_limite: string | null;
+  cree_par: string | null;
+  termine_par: string | null;
+  termine_le: string | null;
+  conjoint_prevenu_pour: string | null;
+}
+
+/** Ce que chaque sorte exige de la tâche, et le texte de la notification. */
+const SORTES: Record<string, {
+  permise: (t: Tache, moi: string) => boolean;
+  titre: (pseudo: string) => string;
+  corps: (t: Tache) => string;
+}> = {
+  creee: {
+    permise: (t, moi) => t.cree_par === moi && t.statut !== "fait",
+    titre: (p) => `${p} a ajouté une tâche`,
+    corps: (t) => t.date_limite ? `${t.titre}\nÀ faire pour le ${formaterJour(t.date_limite)}` : t.titre,
+  },
+  relance: {
+    permise: (t) => t.statut !== "fait" && !t.devenu_sans_objet,
+    titre: (p) => `Petit rappel de ${p}`,
+    corps: (t) => t.date_limite ? `${t.titre}\nÀ faire pour le ${formaterJour(t.date_limite)}` : t.titre,
+  },
+  fait: {
+    permise: (t, moi) => t.statut === "fait" && t.termine_par === moi,
+    titre: (p) => `${p} a terminé une tâche`,
+    corps: (t) => t.note_de_cloture ? `${t.titre}\n« ${t.note_de_cloture} »` : t.titre,
+  },
+};
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
 
@@ -71,8 +123,10 @@ Deno.serve(async (req) => {
   const { data: { user } } = await base.auth.getUser(jeton);
   if (!user) return reponse({ erreur: "non connecté" }, 401);
 
-  const { tache_id } = await req.json().catch(() => ({ tache_id: null }));
+  const { tache_id, sorte = "fait" } = await req.json().catch(() => ({ tache_id: null }));
   if (!tache_id) return reponse({ erreur: "tâche manquante" }, 400);
+  const regle = SORTES[sorte];
+  if (!regle) return reponse({ erreur: "sorte inconnue" }, 400);
 
   const { data: moi, error: e1 } = await base.from("membres")
     .select("id,espace_id,pseudo").eq("user_id", user.id).maybeSingle();
@@ -80,15 +134,11 @@ Deno.serve(async (req) => {
   if (!moi) return reponse({ erreur: "aucun espace" }, 403);
 
   const { data: tache, error: e2 } = await base.from("taches")
-    .select("id,titre,note_de_cloture,statut,termine_par,termine_le,conjoint_prevenu_pour")
+    .select("id,titre,note_de_cloture,statut,devenu_sans_objet,date_limite,cree_par,termine_par,termine_le,conjoint_prevenu_pour")
     .eq("id", tache_id).eq("espace_id", moi.espace_id).maybeSingle();
   if (e2) throw e2;
-  if (!tache || tache.statut !== "fait" || tache.termine_par !== moi.id) {
-    return reponse({ erreur: "tâche introuvable ou pas terminée par toi" }, 403);
-  }
-
-  if (tache.conjoint_prevenu_pour === tache.termine_le) {
-    return reponse({ envoyes: 0, raison: "deja_prevenu" });
+  if (!tache || !regle.permise(tache, moi.id)) {
+    return reponse({ erreur: "tâche introuvable ou pas dans le bon état" }, 403);
   }
 
   const { data: abonnements, error: e3 } = await base.from("push_abonnements")
@@ -97,9 +147,31 @@ Deno.serve(async (req) => {
   if (e3) throw e3;
   if (!abonnements?.length) return reponse({ envoyes: 0, raison: "pas_de_telephone" });
 
+  // Un seul envoi par clôture pour « fait ». Pour les autres, une ligne dans le
+  // journal des envois : une fois par jour pour « creee » (l'app ne l'appelle
+  // qu'à la création), une fois par heure pour « relance » — assez pour
+  // insister, pas assez pour harceler.
+  let journal: { espace_id: string; jour: string; sorte: string } | null = null;
+  if (sorte === "fait") {
+    if (tache.conjoint_prevenu_pour === tache.termine_le) {
+      return reponse({ envoyes: 0, raison: "deja_prevenu" });
+    }
+  } else {
+    const maintenant = new Date().toISOString();
+    journal = {
+      espace_id: moi.espace_id,
+      jour: maintenant.slice(0, 10),
+      sorte: sorte === "creee" ? `creee-${tache.id}` : `relance-${tache.id}-${maintenant.slice(11, 13)}h`,
+    };
+    const { data: inscrit, error: e4 } = await base.from("push_envois")
+      .upsert(journal, { onConflict: "espace_id,jour,sorte", ignoreDuplicates: true }).select();
+    if (e4) throw e4;
+    if (!inscrit?.length) return reponse({ envoyes: 0, raison: "deja_prevenu" });
+  }
+
   const contenu = JSON.stringify({
-    titre: `${moi.pseudo} a terminé une tâche`,
-    corps: tache.note_de_cloture ? `${tache.titre}\n« ${tache.note_de_cloture} »` : tache.titre,
+    titre: regle.titre(moi.pseudo),
+    corps: regle.corps(tache),
     tag: `tache-${tache.id}`,
     url: "./",
   });
@@ -127,9 +199,18 @@ Deno.serve(async (req) => {
     }
   }
 
-  if (!envoyes) return reponse({ envoyes: 0, raison: "echec" });
+  if (!envoyes) {
+    // Rien n'est parti : on libère la place pour qu'un nouvel essai soit possible.
+    if (journal) {
+      await base.from("push_envois").delete()
+        .eq("espace_id", journal.espace_id).eq("jour", journal.jour).eq("sorte", journal.sorte);
+    }
+    return reponse({ envoyes: 0, raison: "echec" });
+  }
 
-  await base.from("taches")
-    .update({ conjoint_prevenu_pour: tache.termine_le }).eq("id", tache.id);
+  if (sorte === "fait") {
+    await base.from("taches")
+      .update({ conjoint_prevenu_pour: tache.termine_le }).eq("id", tache.id);
+  }
   return reponse({ envoyes });
 });

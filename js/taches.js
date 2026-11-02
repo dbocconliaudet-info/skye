@@ -229,6 +229,9 @@ function ouvrirDetail(id) {
     t.termine_le && ['Clôturée par', `${pseudoDe(t.termine_par)}, le ${formaterDateHeure(t.termine_le)}`],
   ].filter(Boolean);
 
+  const conjoint = conjointDe();
+  const relancable = conjoint && t.statut !== 'fait' && !t.devenu_sans_objet;
+
   const statuts = groupeOptions(STATUTS, t.statut, {
     vert: true,
     onChange: (nouveau) => {
@@ -268,6 +271,10 @@ function ouvrirDetail(id) {
     ),
 
     el('div', { class: 'separateur' }),
+    relancable ? el('button', {
+      class: 'btn btn-secondaire',
+      onclick: () => { fermerFeuille(); prevenir(t, conjoint, 'relance'); },
+    }, `Envoyer un rappel à ${conjoint.pseudo}`) : null,
     el('button', {
       class: 'btn btn-secondaire',
       onclick: () => { fermerFeuille(); ouvrirFormulaire(t); },
@@ -326,17 +333,29 @@ async function appliquer(id, patch) {
   }
 }
 
+/** L'autre membre de l'espace, s'il a déjà rejoint. */
+const conjointDe = () => etat.membres.find((m) => m.id !== etat.membreId);
+
+/** Ce que dit le toast, selon la sorte d'envoi. `avant` ouvre les messages
+ *  d'échec : la tâche, elle, est bien enregistrée. */
+const TOASTS = {
+  creee: { ok: (p) => `Tâche ajoutée, ${p} est au courant`, deja: 'Tâche ajoutée', avant: 'Tâche ajoutée' },
+  relance: { ok: (p) => `Rappel envoyé à ${p}`, deja: 'Un rappel est déjà parti il y a moins d’une heure', avant: 'Rappel non envoyé' },
+  fait: { ok: (p) => `Et voilà, tadam ! ${p} est au courant`, deja: 'Et voilà, tadam !', avant: 'C’est noté' },
+};
+
 /** Le toast dit ce qui s'est réellement passé : mieux vaut « pas prévenu » que
  *  laisser croire à tort que l'autre est au courant. */
-async function prevenir(t, conjoint) {
+async function prevenir(t, conjoint, sorte) {
+  const textes = TOASTS[sorte];
   try {
-    const { envoyes, raison } = await db.prevenirConjoint(t.id);
-    if (envoyes) toast(`Et voilà, tadam ! ${conjoint.pseudo} est au courant`);
-    else if (raison === 'deja_prevenu') toast('Et voilà, tadam !');
-    else if (raison === 'pas_de_telephone') toast(`C’est noté, mais ${conjoint.pseudo} n’a pas activé les notifications`);
-    else toast(`C’est noté, mais impossible de prévenir ${conjoint.pseudo}`);
+    const { envoyes, raison } = await db.prevenirConjoint(t.id, sorte);
+    if (envoyes) toast(textes.ok(conjoint.pseudo));
+    else if (raison === 'deja_prevenu') toast(textes.deja);
+    else if (raison === 'pas_de_telephone') toast(`${textes.avant}, mais ${conjoint.pseudo} n’a pas activé les notifications`);
+    else toast(`${textes.avant}, mais impossible de prévenir ${conjoint.pseudo}`);
   } catch {
-    toast(`C’est noté, mais impossible de prévenir ${conjoint.pseudo}`);
+    toast(`${textes.avant}, mais impossible de prévenir ${conjoint.pseudo}`);
   }
 }
 
@@ -347,7 +366,7 @@ function demanderNoteDeCloture(t) {
     placeholder: 'Ex : offert une carafe, envoyé le 12/07…',
   });
 
-  const conjoint = etat.membres.find((m) => m.id !== etat.membreId);
+  const conjoint = conjointDe();
   const casePrevenir = el('input', { type: 'checkbox' });
 
   const valider = async () => {
@@ -360,7 +379,7 @@ function demanderNoteDeCloture(t) {
       termine_le: new Date().toISOString(),
     });
     if (!enregistre) return;
-    if (aPrevenir) await prevenir(t, conjoint);
+    if (aPrevenir) await prevenir(t, conjoint, 'fait');
     else toast('Et voilà, tadam !');
   };
 
@@ -415,6 +434,12 @@ function ouvrirFormulaire(existante) {
     ...[['jour', 'jours'], ['semaine', 'semaines'], ['mois', 'mois']].map(([v, lib]) =>
       el('option', { value: v, selected: (rec.delai_unite || 'jour') === v }, lib)));
 
+  const casePrevenirRetour = el('input', { type: 'checkbox', checked: !!rec.prevenir });
+
+  // À la création seulement : prévenir l'autre qu'une tâche vient d'arriver.
+  const conjoint = conjointDe();
+  const casePrevenirCreation = el('input', { type: 'checkbox' });
+
   const blocRecurrence = el('div', { class: 'masque' },
     el('p', { class: 'options-titre' }, 'Elle revient tous les…'),
     frequence,
@@ -428,6 +453,9 @@ function ouvrirFormulaire(existante) {
     ),
     el('p', { class: 'feuille-info' },
       'La carte reste cachée jusqu’à ce délai avant l’échéance. Mettre 0 pour l’afficher tout de suite.'),
+    el('label', { class: 'bascule' }, casePrevenirRetour,
+      el('span', {}, 'Prévenir quand elle réapparaît',
+        el('span', { class: 'sous' }, 'Une notification le matin, vers 8 h 30, à qui s’en occupe.'))),
   );
 
   const caseRecurrence = el('input', {
@@ -449,6 +477,7 @@ function ouvrirFormulaire(existante) {
       jour: frequence.valeur === 'mois' && jourDuMois.value ? Number(jourDuMois.value) : null,
       delai_nb: Number(delaiNb.value) || 0,
       delai_unite: delaiUnite.value,
+      prevenir: casePrevenirRetour.checked,
     } : null;
 
     if (recurrence && !echeance.value) {
@@ -477,7 +506,8 @@ function ouvrirFormulaire(existante) {
       } else {
         const creee = await db.creerTache({ ...donnees, cree_par: etat.membreId });
         etat.taches.unshift(creee);
-        toast('Tâche ajoutée');
+        if (conjoint && casePrevenirCreation.checked) prevenir(creee, conjoint, 'creee');
+        else toast('Tâche ajoutée');
       }
       fermerFeuille();
       rendreTaches();
@@ -503,6 +533,10 @@ function ouvrirFormulaire(existante) {
       el('span', {}, 'Tâche récurrente',
         el('span', { class: 'sous' }, 'Elle réapparaîtra toute seule à chaque échéance.'))),
     blocRecurrence,
+
+    !t.id && conjoint ? el('label', { class: 'bascule' }, casePrevenirCreation,
+      el('span', {}, `Prévenir ${conjoint.pseudo}`,
+        el('span', { class: 'sous' }, 'Par une notification, dès que la tâche est ajoutée.'))) : null,
 
     el('button', { class: 'btn btn-primaire', onclick: enregistrer }, t.id ? 'Enregistrer' : 'Ajouter la tâche'),
     el('button', { class: 'btn btn-fantome', onclick: fermerFeuille }, 'Annuler'),
